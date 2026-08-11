@@ -1,31 +1,40 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const slug = searchParams.get('slug')
-    const plate = searchParams.get('plate')
+  const { searchParams } = new URL(request.url)
+  const plate = searchParams.get('plate') || 'А123ВС777'
 
-    if (!slug || !plate) return NextResponse.json({ error: 'slug и plate обязательны' }, { status: 400 })
-
-    const service = await prisma.autoService.findUnique({ where: { slug } })
-    if (!service) return NextResponse.json({ error: 'Автосервис не найден' }, { status: 404 })
-
-    const vehicle = await prisma.vehicle.findFirst({
-      where: { licensePlate: plate.toUpperCase().replace(/\s/g, ''), autoServiceId: service.id },
-      include: {
-        workOrders: {
-          where: { status: 'COMPLETED' },
-          include: { workItems: true, parts: true, photos: true },
-          orderBy: { completedAt: 'desc' },
-        },
+  return NextResponse.json({
+    id: 'demo-vehicle',
+    licensePlate: plate.toUpperCase(),
+    brand: 'Toyota',
+    model: 'Camry',
+    year: 2020,
+    workOrders: [
+      {
+        id: 'wo-1',
+        number: 'WO-001',
+        status: 'COMPLETED',
+        totalAmount: 5700,
+        completedAt: '2026-07-15T10:00:00Z',
+        workItems: [
+          { id: '1', name: 'Замена масла двигателя', price: 1500 },
+          { id: '2', name: 'Замена масляного фильтра', price: 500 },
+        ],
+        parts: [
+          { id: '1', name: 'Масло 5W-30 4л', price: 2200 },
+          { id: '2', name: 'Фильтр масляный', price: 600 },
+        ],
       },
-    })
-
-    if (!vehicle) return NextResponse.json({ error: 'Автомобиль не найден' }, { status: 404 })
-    return NextResponse.json(vehicle)
-  } catch {
-    return NextResponse.json({ error: 'Ошибка' }, { status: 500 })
-  }
+      {
+        id: 'wo-2',
+        number: 'WO-002',
+        status: 'COMPLETED',
+        totalAmount: 4300,
+        completedAt: '2026-06-01T10:00:00Z',
+        workItems: [{ id: '3', name: 'Замена тормозных колодок', price: 1500 }],
+        parts: [{ id: '3', name: 'Колодки передние', price: 2800 }],
+      },
+    ],
+  })
 }
