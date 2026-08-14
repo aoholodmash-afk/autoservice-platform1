@@ -1,6 +1,7 @@
 # robots.txt — AutoService Platform
 User-agent: *
 Allow: /
+Allow: /services/
 Disallow: /admin/
 Disallow: /super/
 Disallow: /api/
@@ -13,3 +14,4 @@ Sitemap: https://autoservice.app/sitemap.xml
 User-agent: Yandex
 Crawl-delay: 2
 Allow: /
+Allow: /services/

@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [
       {
-        url: `${SITE_URL}/og-image.png`,
+        url: `${SITE_URL}/og-image.svg`,
         width: 1200,
         height: 630,
         alt: 'AutoService — Запись на ТО',
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'AutoService — Запись на ТО и ремонт',
     description: SITE_DESCRIPTION,
-    images: [`${SITE_URL}/og-image.png`],
+    images: [`${SITE_URL}/og-image.svg`],
   },
   alternates: {
     canonical: SITE_URL,
@@ -66,8 +66,8 @@ export const metadata: Metadata = {
     title: SITE_NAME,
   },
   verification: {
-    // yandex: 'your-yandex-verification-code',
-    // google: 'your-google-verification-code',
+    yandex: 'yandex-verification-placeholder',
+    google: 'google-verification-placeholder',
   },
   category: 'automotive',
 }
@@ -90,7 +90,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="canonical" href={SITE_URL} />
         <meta name="format-detection" content="telephone=no" />
+        <meta name="yandex-verification" content="yandex-verification-placeholder" />
+        <meta name="google-site-verification" content="google-verification-placeholder" />
+        <meta name="geo.region" content="RU" />
+        <meta name="geo.placename" content="Россия" />
+        <meta httpEquiv="x-ua-compatible" content="IE=edge" />
       </head>
       <body className="antialiased overscroll-y-contain">
         {children}

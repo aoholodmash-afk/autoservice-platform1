@@ -4,12 +4,7 @@ const BASE_URL = 'https://autoservice.app'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: BASE_URL,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
+    { url: BASE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
   ]
 
   // Tenant pages
@@ -17,9 +12,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const tenantPages: MetadataRoute.Sitemap = tenantSlugs.map(slug => ({
     url: `${BASE_URL}/${slug}`,
     lastModified: new Date(),
-    changeFrequency: 'daily',
+    changeFrequency: 'daily' as const,
     priority: 0.9,
   }))
 
-  return [...staticPages, ...tenantPages]
+  // Service pages
+  const serviceSlugs = [
+    'zamena-masla', 'zamena-kolodok', 'zamena-grm',
+    'diagnostika', 'shinomontazh', 'tekhobsluzhivanie',
+  ]
+  const servicePages: MetadataRoute.Sitemap = serviceSlugs.map(slug => ({
+    url: `${BASE_URL}/services/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }))
+
+  return [...staticPages, ...tenantPages, ...servicePages]
 }

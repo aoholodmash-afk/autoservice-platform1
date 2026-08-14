@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#007AFF"/>
+      <stop offset="100%" stop-color="#5856D6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="80" y="80" width="1040" height="470" rx="24" fill="white" opacity="0.1"/>
+  
+  <!-- Logo -->
+  <rect x="520" y="120" width="160" height="160" rx="32" fill="white" opacity="0.9"/>
+  <text x="600" y="218" text-anchor="middle" fill="#007AFF" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" font-size="80">A</text>
+  
+  <!-- Title -->
+  <text x="600" y="340" text-anchor="middle" fill="white" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" font-size="48">AutoService</text>
+  
+  <!-- Subtitle -->
+  <text x="600" y="400" text-anchor="middle" fill="white" opacity="0.8" font-family="system-ui, -apple-system, sans-serif" font-size="28">Запись на ТО и ремонт автомобилей</text>
+  
+  <!-- Features -->
+  <text x="200" y="480" text-anchor="middle" fill="white" opacity="0.7" font-family="system-ui, -apple-system, sans-serif" font-size="18">Онлайн-запись</text>
+  <text x="480" y="480" text-anchor="middle" fill="white" opacity="0.7" font-family="system-ui, -apple-system, sans-serif" font-size="18">Прозрачные цены</text>
+  <text x="760" y="480" text-anchor="middle" fill="white" opacity="0.7" font-family="system-ui, -apple-system, sans-serif" font-size="18">Все марки авто</text>
+  <text x="1000" y="480" text-anchor="middle" fill="white" opacity="0.7" font-family="system-ui, -apple-system, sans-serif" font-size="18">Отзывы клиентов</text>
+</svg>
