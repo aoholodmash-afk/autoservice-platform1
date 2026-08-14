@@ -1,12 +1,12 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { useState } from 'react'
 import { getTenantBySlug, Tenant } from '@/lib/tenantStore'
 import { getAuthState, loginAdmin, logoutAdmin, AdminUser } from '@/lib/adminAuth'
 import { haptic } from '@/lib/constants'
 
-export default function TenantAdminPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
+export default function TenantAdminPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
   const tenant = getTenantBySlug(slug)
   const [auth, setAuth] = useState(getAuthState())
   const [section, setSection] = useState<'dashboard' | 'orders' | 'schedule' | 'clients' | 'services' | 'stock'>('dashboard')

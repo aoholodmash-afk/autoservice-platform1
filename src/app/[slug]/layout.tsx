@@ -1,11 +1,9 @@
 'use client'
 
-import { use } from 'react'
-import { getTenantBySlug, Tenant } from '@/lib/tenantStore'
-import { notFound } from 'next/navigation'
+import { getTenantBySlug } from '@/lib/tenantStore'
 
-export default function TenantLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
+export default function TenantLayout({ children, params }: { children: React.ReactNode; params: { slug: string } }) {
+  const { slug } = params
   const tenant = getTenantBySlug(slug)
 
   if (!tenant) {

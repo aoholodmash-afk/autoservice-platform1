@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getTenantBySlug, Tenant } from '@/lib/tenantStore'
 import { useCarStore, SavedCar } from '@/hooks/useCarStore'
 import { t, initLocale } from '@/lib/i18n'
@@ -34,8 +34,8 @@ type Screen =
 
 type Tab = 'home' | 'cars' | 'bookings' | 'profile'
 
-export default function TenantClientPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
+export default function TenantClientPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
   const tenant = getTenantBySlug(slug)
 
   const { cars, activeCar, isLoaded, addCar, setActiveCar } = useCarStore()
