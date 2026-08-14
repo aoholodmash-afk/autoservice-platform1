@@ -1,0 +1,15 @@
+# robots.txt — AutoService Platform
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /super/
+Disallow: /api/
+Disallow: /mechanic/
+
+# Sitemap
+Sitemap: https://autoservice.app/sitemap.xml
+
+# Crawl-delay for Yandex
+User-agent: Yandex
+Crawl-delay: 2
+Allow: /

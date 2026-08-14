@@ -1,25 +1,43 @@
-'use client'
-
+import type { Metadata } from 'next'
 import { getTenantBySlug } from '@/lib/tenantStore'
 
-export default function TenantLayout({ children, params }: { children: React.ReactNode; params: { slug: string } }) {
-  const { slug } = params
-  const tenant = getTenantBySlug(slug)
+type Props = { params: { slug: string } }
 
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const tenant = getTenantBySlug(params.slug)
+  
   if (!tenant) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
-        <div className="text-center">
-          <div className="text-[44px] mb-4">🏪</div>
-          <h1 className="text-[22px] font-bold text-[var(--ink)] mb-2">Филиал не найден</h1>
-          <p className="text-[15px] text-[var(--ink-secondary)] mb-6">Автосервис по адресу /{slug} не существует</p>
-          <a href="/" className="inline-block h-[44px] px-6 bg-[var(--accent)] text-white rounded-[13px] font-semibold leading-[44px]">
-            На главную
-          </a>
-        </div>
-      </div>
-    )
+    return {
+      title: 'Филиал не найден',
+      robots: { index: false, follow: false },
+    }
   }
 
+  const title = `${tenant.name} — Запись на ТО и ремонт`
+  const description = `${tenant.description || 'Профессиональный ремонт и обслуживание автомобилей'}. ${tenant.address}, ${tenant.city}. Запись онлайн, прозрачные цены.`
+
+  return {
+    title,
+    description,
+    keywords: [
+      tenant.name, tenant.city || '', 'автосервис', 'запись на ТО',
+      'ремонт автомобиля', 'техобслуживание', 'ВАЗ', 'Lada',
+    ],
+    robots: { index: true, follow: true },
+    openGraph: {
+      type: 'website',
+      locale: 'ru_RU',
+      url: `https://autoservice.app/${tenant.slug}`,
+      siteName: tenant.name,
+      title,
+      description,
+    },
+    alternates: {
+      canonical: `https://autoservice.app/${tenant.slug}`,
+    },
+  }
+}
+
+export default function TenantLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }

@@ -5,6 +5,7 @@ import { getTenantBySlug, Tenant } from '@/lib/tenantStore'
 import { useCarStore, SavedCar } from '@/hooks/useCarStore'
 import { t, initLocale } from '@/lib/i18n'
 import { initTheme } from '@/lib/theme'
+import { generateAutoRepairLD, generateBreadcrumbLD } from '@/lib/seo'
 import { haptic } from '@/lib/constants'
 
 // Screens
@@ -128,8 +129,18 @@ export default function TenantClientPage({ params }: { params: { slug: string } 
 
   const showTabBar = ['my-cars', 'main-menu', 'tracking'].includes(screen)
 
+  const autoRepairLD = generateAutoRepairLD(tenant)
+  const breadcrumbLD = generateBreadcrumbLD([
+    { name: 'Главная', url: 'https://autoservice.app/' },
+    { name: tenant.name, url: `https://autoservice.app/${tenant.slug}` },
+  ])
+
   return (
     <div className="mx-auto max-w-[430px] min-h-screen bg-[var(--bg)] relative">
+      {/* JSON-LD Structured Data */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(autoRepairLD) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLD) }} />
+
       {/* Tenant header */}
       <div className="sticky top-0 z-20 bg-[var(--card)] border-b border-[var(--separator)] px-4 py-2 flex items-center gap-2">
         <span className="text-[14px] font-semibold text-[var(--ink)]">{tenant.name}</span>

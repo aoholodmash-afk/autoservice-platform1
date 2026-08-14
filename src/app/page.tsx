@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getTenants, Tenant } from '@/lib/tenantStore'
+import { generateOrganizationLD, generateFAQLD } from '@/lib/seo'
 import { haptic } from '@/lib/constants'
 
 export default function HomePage() {
@@ -19,8 +20,28 @@ export default function HomePage() {
 
   const cities = Array.from(new Set(tenants.map(t => t.city).filter((c): c is string => !!c)))
 
+  const organizationLD = generateOrganizationLD()
+  const faqLD = generateFAQLD()
+
   return (
     <div className="min-h-screen bg-[var(--bg)]">
+      {/* JSON-LD Structured Data */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLD) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLD) }} />
+
+      {/* SEO-friendly content for crawlers */}
+      <div className="sr-only">
+        <h1>AutoService — Запись на ТО и ремонт автомобилей</h1>
+        <p>Онлайн-запись на техническое обслуживание и ремонт. ВАЗ, Lada, Toyota, Hyundai, Kia и другие марки.</p>
+        <nav>
+          <ul>
+            <li><a href="/avtomaster-pro">Автомастер Про — Москва</a></li>
+            <li><a href="/autoservice-yug">АвтоСервис Юг — Москва</a></li>
+            <li><a href="/autoservice-sever">АвтоСервис Север — Санкт-Петербург</a></li>
+          </ul>
+        </nav>
+      </div>
+
       {/* Hero */}
       <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)' }}>
         <div className="absolute inset-0">
