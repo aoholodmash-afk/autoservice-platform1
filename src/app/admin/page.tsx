@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { SERVICES, CATEGORIES, ServiceItem } from '@/data/services'
-import { MOCK_CLIENTS, Client } from '@/data/clients'
+import { MOCK_CLIENTS, Client, ClientCar } from '@/data/clients'
 import { MOCK_JOURNAL, JournalEntry } from '@/data/journal'
 import { MOCK_STOCK, getStockCategories, getStockStatus, getLowStockItems, StockItem } from '@/data/stock'
 
 // ===== TYPES =====
 
-type AdminSection = 'dashboard' | 'services' | 'clients' | 'journal' | 'stock' | 'reports' | 'bookings'
+type AdminSection = 'dashboard' | 'services' | 'clients' | 'journal' | 'stock' | 'reports' | 'bookings' | 'new-order'
 
 // ===== MAIN COMPONENT =====
 
@@ -23,6 +23,7 @@ export default function AdminPage() {
 
   const navItems = [
     { id: 'dashboard' as AdminSection, icon: '📊', label: 'Дашборд' },
+    { id: 'new-order' as AdminSection, icon: '➕', label: 'Новый заказ' },
     { id: 'services' as AdminSection, icon: '🔧', label: 'Услуги и цены' },
     { id: 'bookings' as AdminSection, icon: '📅', label: 'Записи' },
     { id: 'clients' as AdminSection, icon: '👥', label: 'Клиенты' },
@@ -117,6 +118,7 @@ export default function AdminPage() {
         {/* Page content */}
         <main className="p-4 lg:p-6">
           {section === 'dashboard' && <DashboardSection />}
+          {section === 'new-order' && <NewOrderSection />}
           {section === 'services' && <ServicesSection />}
           {section === 'bookings' && <BookingsSection />}
           {section === 'clients' && <ClientsSection />}
@@ -270,6 +272,465 @@ function DashboardSection() {
       </div>
     </div>
   )
+}
+
+// ===== NEW ORDER =====
+
+interface OrderItem {
+  serviceId: string
+  serviceName: string
+  laborPrice: number
+  partsPriceMin: number
+  partsPriceMax: number
+  duration: number
+  selectedParts: { name: string; brand: string; price: number; quantity: number }[]
+}
+
+function NewOrderSection() {
+  const [step, setStep] = useState<'client' | 'car' | 'services' | 'review' | 'done'>('client')
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [selectedCar, setSelectedCar] = useState<ClientCar | null>(null)
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([])
+  const [searchClient, setSearchClient] = useState('')
+  const [orderNumber, setOrderNumber] = useState('')
+  const [notes, setNotes] = useState('')
+
+  const filteredClients = MOCK_CLIENTS.filter(c =>
+    c.name.toLowerCase().includes(searchClient.toLowerCase()) || c.phone.includes(searchClient)
+  )
+
+  const selectClient = (client: Client) => {
+    setSelectedClient(client)
+    setStep('car')
+  }
+
+  const selectCar = (car: ClientCar) => {
+    setSelectedCar(car)
+    setStep('services')
+  }
+
+  const toggleService = (service: ServiceItem) => {
+    setOrderItems(prev => {
+      const exists = prev.find(i => i.serviceId === service.id)
+      if (exists) {
+        return prev.filter(i => i.serviceId !== service.id)
+      }
+      return [...prev, {
+        serviceId: service.id,
+        serviceName: service.nameKey,
+        laborPrice: service.laborPrice,
+        partsPriceMin: service.partsPriceMin,
+        partsPriceMax: service.partsPriceMax,
+        duration: service.duration,
+        selectedParts: service.parts.slice(0, 2).map(p => ({
+          name: p.name,
+          brand: p.brand,
+          price: p.priceMin,
+          quantity: 1,
+        })),
+      }]
+    })
+  }
+
+  const removeItem = (serviceId: string) => {
+    setOrderItems(prev => prev.filter(i => i.serviceId !== serviceId))
+  }
+
+  const totalLabor = orderItems.reduce((sum, i) => sum + i.laborPrice, 0)
+  const totalParts = orderItems.reduce((sum, i) => sum + i.selectedParts.reduce((s, p) => s + p.price * p.quantity, 0), 0)
+  const totalTime = orderItems.reduce((sum, i) => sum + i.duration, 0)
+
+  const createOrder = () => {
+    const num = `WO-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`
+    setOrderNumber(num)
+    setStep('done')
+  }
+
+  // STEP: Select Client
+  if (step === 'client') {
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-[13px] shadow-sm p-5">
+          <h3 className="text-[17px] font-semibold text-[#1C1C1E] mb-1">Шаг 1: Выбор клиента</h3>
+          <p className="text-[13px] text-[#8E8E93] mb-4">Найдите клиента по имени или телефону</p>
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8E8E93]" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"/>
+            </svg>
+            <input
+              type="text"
+              value={searchClient}
+              onChange={(e) => setSearchClient(e.target.value)}
+              placeholder="Имя или телефон клиента..."
+              className="w-full h-[44px] pl-10 pr-4 bg-[#F2F2F7] rounded-[10px] text-[17px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30"
+              autoFocus
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {filteredClients.map(client => (
+            <button
+              key={client.id}
+              onClick={() => selectClient(client)}
+              className="w-full bg-white rounded-[13px] shadow-sm p-4 flex items-center gap-4 text-left hover:shadow-md transition-shadow"
+            >
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-[18px] font-bold ${
+                client.status === 'vip' ? 'bg-[#FF9500] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E]'
+              }`}>
+                {client.name.charAt(0)}
+              </div>
+              <div className="flex-1">
+                <div className="text-[17px] font-medium text-[#1C1C1E]">{client.name}</div>
+                <div className="text-[13px] text-[#8E8E93]">{client.phone} • {client.cars.length} авто • {client.totalOrders} заказов</div>
+              </div>
+              {client.status === 'vip' && (
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#FF9500] bg-opacity-15 text-[#FF9500]">VIP</span>
+              )}
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="opacity-30">
+                <path d="M1 1L7 7L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // STEP: Select Car
+  if (step === 'car' && selectedClient) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-[13px] shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <button onClick={() => setStep('client')} className="text-[#007AFF] text-[15px]">← Назад</button>
+            <span className="text-[13px] text-[#8E8E93]">|</span>
+            <span className="text-[13px] text-[#8E8E93]">{selectedClient.name}</span>
+          </div>
+          <h3 className="text-[17px] font-semibold text-[#1C1C1E] mb-1">Шаг 2: Выбор автомобиля</h3>
+          <p className="text-[13px] text-[#8E8E93]">Выберите автомобиль клиента</p>
+        </div>
+
+        <div className="space-y-3">
+          {selectedClient.cars.map((car, i) => (
+            <button
+              key={i}
+              onClick={() => selectCar(car)}
+              className="w-full bg-white rounded-[13px] shadow-sm p-4 flex items-center gap-4 text-left hover:shadow-md transition-shadow"
+            >
+              <div className="w-12 h-12 rounded-[10px] bg-[#007AFF] bg-opacity-10 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2">
+                  <path d="M5 17h14M5 17a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2"/>
+                  <circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-[17px] font-medium text-[#1C1C1E]">{car.brand} {car.model}</div>
+                <div className="text-[13px] text-[#8E8E93]">{car.year} • {car.plate}{car.mileage ? ` • ${car.mileage.toLocaleString('ru-RU')} км` : ''}</div>
+              </div>
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="opacity-30">
+                <path d="M1 1L7 7L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // STEP: Select Services
+  if (step === 'services') {
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-[13px] shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <button onClick={() => setStep('car')} className="text-[#007AFF] text-[15px]">← Назад</button>
+            <span className="text-[13px] text-[#8E8E93]">|</span>
+            <span className="text-[13px] text-[#8E8E93]">{selectedClient?.name} • {selectedCar?.brand} {selectedCar?.model}</span>
+          </div>
+          <h3 className="text-[17px] font-semibold text-[#1C1C1E] mb-1">Шаг 3: Выбор услуг</h3>
+          <p className="text-[13px] text-[#8E8E93]">Выберите одну или несколько услуг</p>
+        </div>
+
+        {/* Selected items summary */}
+        {orderItems.length > 0 && (
+          <div className="bg-[#007AFF] bg-opacity-10 rounded-[13px] p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[15px] font-semibold text-[#007AFF]">Выбрано: {orderItems.length}</span>
+              <button onClick={() => setStep('review')} className="h-[32px] px-4 bg-[#007AFF] text-white rounded-[10px] text-[13px] font-semibold">
+                Далее →
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {orderItems.map(item => (
+                <span key={item.serviceId} className="px-2 py-1 bg-white rounded-lg text-[13px] text-[#1C1C1E] flex items-center gap-1">
+                  {SERVICES.find(s => s.id === item.serviceId)?.icon}
+                  {item.serviceName.replace('to.', '')}
+                  <button onClick={() => removeItem(item.serviceId)} className="ml-1 text-[#FF3B30] text-[11px]">✕</button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Services list */}
+        <div className="space-y-2">
+          {SERVICES.map(service => {
+            const isSelected = orderItems.some(i => i.serviceId === service.id)
+            return (
+              <button
+                key={service.id}
+                onClick={() => toggleService(service)}
+                className={`w-full rounded-[13px] shadow-sm p-4 flex items-center gap-4 text-left transition-all ${
+                  isSelected ? 'bg-[#007AFF] bg-opacity-10 border-2 border-[#007AFF]' : 'bg-white border-2 border-transparent'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center text-[20px] ${
+                  isSelected ? 'bg-[#007AFF] text-white' : 'bg-[#F2F2F7]'
+                }`}>
+                  {isSelected ? '✓' : service.icon}
+                </div>
+                <div className="flex-1">
+                  <div className="text-[15px] font-medium text-[#1C1C1E]">{service.nameKey.replace('to.', '').replace(/([A-Z])/g, ' $1')}</div>
+                  <div className="text-[13px] text-[#8E8E93]">Работа: {service.laborPrice} ₽ • Запчасти от: {service.partsPriceMin} ₽ • {service.duration} мин</div>
+                </div>
+                <div className="text-[15px] font-semibold text-[#007AFF]">
+                  от {(service.laborPrice + service.partsPriceMin).toLocaleString('ru-RU')} ₽
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  // STEP: Review & Create
+  if (step === 'review') {
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-[13px] shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <button onClick={() => setStep('services')} className="text-[#007AFF] text-[15px]">← Назад</button>
+          </div>
+          <h3 className="text-[17px] font-semibold text-[#1C1C1E] mb-1">Шаг 4: Проверка и создание</h3>
+          <p className="text-[13px] text-[#8E8E93]">Проверьте заказ и создайте заказ-наряд</p>
+        </div>
+
+        {/* Client & Car info */}
+        <div className="bg-white rounded-[13px] shadow-sm p-5">
+          <h4 className="text-[13px] text-[#8E8E93] mb-3">КЛИЕНТ И АВТОМОБИЛЬ</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-[15px] font-medium text-[#1C1C1E]">{selectedClient?.name}</div>
+              <div className="text-[13px] text-[#8E8E93]">{selectedClient?.phone}</div>
+            </div>
+            <div>
+              <div className="text-[15px] font-medium text-[#1C1C1E]">{selectedCar?.brand} {selectedCar?.model}</div>
+              <div className="text-[13px] text-[#8E8E93]">{selectedCar?.year} • {selectedCar?.plate}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Order items */}
+        <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+          <div className="px-5 py-3 bg-[#F2F2F7]">
+            <h4 className="text-[13px] font-medium text-[#8E8E93]">УСЛУГИ И ЗАПЧАСТИ</h4>
+          </div>
+          {orderItems.map((item, idx) => {
+            const service = SERVICES.find(s => s.id === item.serviceId)
+            const partsTotal = item.selectedParts.reduce((s, p) => s + p.price * p.quantity, 0)
+            return (
+              <div key={idx} className="px-5 py-4 border-b border-[#E5E5EA] last:border-b-0">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[18px]">{service?.icon}</span>
+                    <span className="text-[15px] font-medium text-[#1C1C1E]">
+                      {item.serviceName.replace('to.', '').replace(/([A-Z])/g, ' $1')}
+                    </span>
+                  </div>
+                  <span className="text-[15px] font-semibold text-[#1C1C1E]">{item.laborPrice.toLocaleString('ru-RU')} ₽</span>
+                </div>
+                <div className="ml-8 space-y-1">
+                  {item.selectedParts.map((part, pi) => (
+                    <div key={pi} className="flex items-center justify-between text-[13px]">
+                      <span className="text-[#8E8E93]">{part.brand} {part.name} × {part.quantity}</span>
+                      <span className="text-[#1C1C1E]">{(part.price * part.quantity).toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Notes */}
+        <div className="bg-white rounded-[13px] shadow-sm p-5">
+          <label className="text-[13px] text-[#8E8E93] mb-2 block">ПРИМЕЧАНИЕ</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Дополнительные заметки к заказу..."
+            rows={2}
+            className="w-full px-4 py-3 bg-[#F2F2F7] rounded-[10px] text-[15px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30 resize-none"
+          />
+        </div>
+
+        {/* Totals */}
+        <div className="bg-white rounded-[13px] shadow-sm p-5">
+          <h4 className="text-[13px] text-[#8E8E93] mb-3">ИТОГО</h4>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-[15px] text-[#8E8E93]">Работа ({orderItems.length} усл.)</span>
+              <span className="text-[15px] text-[#1C1C1E]">{totalLabor.toLocaleString('ru-RU')} ₽</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[15px] text-[#8E8E93]">Запчасти</span>
+              <span className="text-[15px] text-[#1C1C1E]">{totalParts.toLocaleString('ru-RU')} ₽</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[15px] text-[#8E8E93]">Время выполнения</span>
+              <span className="text-[15px] text-[#1C1C1E]">~{totalTime} мин</span>
+            </div>
+            <div className="border-t border-[#E5E5EA] pt-2 mt-2">
+              <div className="flex justify-between">
+                <span className="text-[17px] font-semibold text-[#1C1C1E]">ИТОГО</span>
+                <span className="text-[22px] font-bold text-[#007AFF]">{(totalLabor + totalParts).toLocaleString('ru-RU')} ₽</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={createOrder}
+            className="flex-1 h-[50px] bg-[#34C759] text-white rounded-[13px] font-semibold text-[17px] active:scale-[0.98] transition-transform"
+          >
+            ✓ Создать заказ-наряд
+          </button>
+          <button
+            onClick={() => { /* Print preview */ }}
+            className="h-[50px] px-6 bg-[#F2F2F7] text-[#1C1C1E] rounded-[13px] font-semibold text-[17px]"
+          >
+            🖨
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // STEP: Done — Receipt / Invoice
+  if (step === 'done') {
+    const now = new Date()
+    const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+
+    return (
+      <div className="space-y-4">
+        {/* Success */}
+        <div className="bg-[#34C759] bg-opacity-10 rounded-[13px] p-6 text-center">
+          <div className="text-[44px] mb-3">✅</div>
+          <h3 className="text-[22px] font-bold text-[#1C1C1E] mb-1">Заказ создан!</h3>
+          <p className="text-[15px] text-[#8E8E93]">Заказ-наряд {orderNumber}</p>
+        </div>
+
+        {/* Receipt */}
+        <div id="receipt" className="bg-white rounded-[13px] shadow-sm p-6">
+          <div className="text-center border-b border-dashed border-[#E5E5EA] pb-4 mb-4">
+            <h3 className="text-[17px] font-bold text-[#1C1C1E]">АВТОСЕРВИС</h3>
+            <p className="text-[13px] text-[#8E8E93]">г. Москва, ул. Примерная, д. 1</p>
+            <p className="text-[13px] text-[#8E8E93]">тел: +7 (999) 123-45-67</p>
+          </div>
+
+          <div className="text-center mb-4">
+            <p className="text-[15px] font-bold text-[#1C1C1E]">ЗАКАЗ-НАРЯД №{orderNumber}</p>
+            <p className="text-[13px] text-[#8E8E93]">{dateStr} {timeStr}</p>
+          </div>
+
+          <div className="border-b border-dashed border-[#E5E5EA] pb-3 mb-3">
+            <p className="text-[13px] text-[#8E8E93]">Клиент</p>
+            <p className="text-[15px] font-medium text-[#1C1C1E]">{selectedClient?.name}</p>
+            <p className="text-[13px] text-[#8E8E93]">{selectedClient?.phone}</p>
+          </div>
+
+          <div className="border-b border-dashed border-[#E5E5EA] pb-3 mb-3">
+            <p className="text-[13px] text-[#8E8E93]">Автомобиль</p>
+            <p className="text-[15px] font-medium text-[#1C1C1E]">{selectedCar?.brand} {selectedCar?.model}, {selectedCar?.year} г.</p>
+            <p className="text-[13px] text-[#8E8E93]">Гос. номер: {selectedCar?.plate}</p>
+          </div>
+
+          <div className="mb-4">
+            <div className="flex justify-between text-[13px] text-[#8E8E93] border-b border-[#E5E5EA] pb-1 mb-2">
+              <span>Наименование</span>
+              <span>Сумма</span>
+            </div>
+            {orderItems.map((item, idx) => {
+              const partsTotal = item.selectedParts.reduce((s, p) => s + p.price * p.quantity, 0)
+              return (
+                <div key={idx} className="mb-2">
+                  <div className="flex justify-between text-[15px]">
+                    <span className="text-[#1C1C1E]">{item.serviceName.replace('to.', '').replace(/([A-Z])/g, ' $1')}</span>
+                    <span className="font-medium text-[#1C1C1E]">{item.laborPrice.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  {item.selectedParts.map((part, pi) => (
+                    <div key={pi} className="flex justify-between text-[13px] text-[#8E8E93] ml-4">
+                      <span>{part.brand} × {part.quantity}</span>
+                      <span>{(part.price * part.quantity).toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="border-t-2 border-[#1C1C1E] pt-3">
+            <div className="flex justify-between mb-1">
+              <span className="text-[15px] text-[#8E8E93]">Работа:</span>
+              <span className="text-[15px] text-[#1C1C1E]">{totalLabor.toLocaleString('ru-RU')} ₽</span>
+            </div>
+            <div className="flex justify-between mb-1">
+              <span className="text-[15px] text-[#8E8E93]">Запчасти:</span>
+              <span className="text-[15px] text-[#1C1C1E]">{totalParts.toLocaleString('ru-RU')} ₽</span>
+            </div>
+            <div className="flex justify-between pt-2 border-t border-[#E5E5EA]">
+              <span className="text-[17px] font-bold text-[#1C1C1E]">ИТОГО:</span>
+              <span className="text-[22px] font-bold text-[#007AFF]">{(totalLabor + totalParts).toLocaleString('ru-RU')} ₽</span>
+            </div>
+          </div>
+
+          <div className="text-center mt-6 pt-4 border-t border-dashed border-[#E5E5EA]">
+            <p className="text-[13px] text-[#8E8E93]">Спасибо за обращение!</p>
+            <p className="text-[13px] text-[#8E8E93]">Готовность: ~{totalTime} мин</p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => window.print()}
+            className="flex-1 h-[50px] bg-[#F2F2F7] text-[#1C1C1E] rounded-[13px] font-semibold text-[17px]"
+          >
+            🖨 Печать чека
+          </button>
+          <button
+            onClick={() => {
+              setStep('client')
+              setSelectedClient(null)
+              setSelectedCar(null)
+              setOrderItems([])
+              setNotes('')
+            }}
+            className="flex-1 h-[50px] bg-[#007AFF] text-white rounded-[13px] font-semibold text-[17px]"
+          >
+            ➕ Новый заказ
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return null
 }
 
 // ===== SERVICES =====
