@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AVTOVAZ_MODELS, Vehicle } from '@/data/vehicles'
+import { BRANDS, Vehicle, findModel } from '@/data/vehicles'
 import { CATEGORIES, Category } from '@/data/categories'
 import { REPAIRS, Repair } from '@/data/repairs'
 import { SavedCar } from '@/hooks/useCarStore'
@@ -40,16 +40,11 @@ export function RepairScreen({ cars, activeCar, onSelectCar, onAddCar, onBack, o
   const [bookingLoading, setBookingLoading] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
 
-  // Auto-match SavedCar → Vehicle
+  // Auto-match SavedCar → Vehicle (searches ALL brands)
   useEffect(() => {
     if (selectedCar) {
-      const match = AVTOVAZ_MODELS.find(m => {
-        const carModel = selectedCar.modelName.toLowerCase()
-        const vehicleName = m.name.toLowerCase()
-        return carModel.includes(vehicleName.split(' ').pop() || '') ||
-               vehicleName.includes(carModel.split(' ').pop() || '')
-      })
-      setSelectedVehicle(match || null)
+      const result = findModel(selectedCar.modelName)
+      setSelectedVehicle(result?.model || null)
     }
   }, [selectedCar])
 

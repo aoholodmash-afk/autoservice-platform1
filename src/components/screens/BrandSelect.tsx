@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BRANDS } from '@/data/vaz'
+import { BRANDS, getPopularBrands } from '@/data/vehicles'
 import { t } from '@/lib/i18n'
 import { haptic } from '@/lib/constants'
 
@@ -12,10 +12,12 @@ interface BrandSelectProps {
 export function BrandSelect({ onSelect }: BrandSelectProps) {
   const [search, setSearch] = useState('')
 
-  const filtered = BRANDS.filter(b =>
-    b.name.toLowerCase().includes(search.toLowerCase()) ||
-    b.nameEn.toLowerCase().includes(search.toLowerCase())
-  )
+  const popularBrands = getPopularBrands()
+  const allBrands = BRANDS
+
+  const filtered = search
+    ? allBrands.filter(b => b.name.toLowerCase().includes(search.toLowerCase()))
+    : allBrands
 
   const handleSelect = (id: string, name: string) => {
     haptic('medium')
@@ -37,43 +39,60 @@ export function BrandSelect({ onSelect }: BrandSelectProps) {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('wizard.brand.search')}
-          className="w-full h-[36px] pl-10 pr-4 bg-[var(--fill)] rounded-[10px] text-[15px] text-[var(--ink)] placeholder-[var(--ink-secondary)] outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-opacity-30"
+          placeholder="Поиск марки..."
+          className="w-full h-[40px] pl-10 pr-4 bg-[var(--fill)] rounded-[10px] text-[15px] text-[var(--ink)] placeholder-[var(--ink-secondary)] outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-opacity-30"
         />
       </div>
 
-      {/* Brand list */}
-      <div className="space-y-3">
-        {filtered.map((brand, index) => (
-          <button
-            key={brand.id}
-            onClick={() => handleSelect(brand.id, brand.name)}
-            className="w-full flex items-center gap-4 p-4 bg-[var(--card)] rounded-[13px] shadow-[var(--shadow-card)] active:scale-[0.98] transition-transform duration-200 text-left spring-up"
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            {/* Brand icon */}
-            <div className="w-[55px] h-[55px] rounded-[13px] bg-[var(--fill)] flex items-center justify-center text-[28px]">
-              {brand.id === 'vaz' ? '🇷🇺' : '🚗'}
-            </div>
-
-            {/* Brand info */}
-            <div className="flex-1">
-              <div className="text-[17px] font-semibold text-[var(--ink)]">
-                {brand.name}
-              </div>
-              {brand.models.length > 0 && (
-                <div className="text-[13px] text-[var(--ink-secondary)] mt-0.5">
-                  {brand.models.length} моделей
+      {/* Popular brands (when not searching) */}
+      {!search && (
+        <div className="mb-6">
+          <div className="text-[12px] text-[var(--ink-secondary)] uppercase font-medium mb-3 tracking-wider">Популярные</div>
+          <div className="grid grid-cols-2 gap-2">
+            {popularBrands.slice(0, 8).map((brand, i) => (
+              <button
+                key={brand.id}
+                onClick={() => handleSelect(brand.id, brand.name)}
+                className="flex items-center gap-3 p-3 bg-[var(--card)] rounded-[13px] shadow-[var(--shadow-card)] active:scale-[0.97] transition-transform spring-up"
+                style={{ animationDelay: `${i * 40}ms` }}
+              >
+                <span className="text-[24px]">{brand.logo}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-semibold text-[var(--ink)] truncate">{brand.name}</div>
+                  <div className="text-[11px] text-[var(--ink-secondary)]">{brand.models.length} моделей</div>
                 </div>
-              )}
-            </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-            {/* Arrow */}
-            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="opacity-30">
-              <path d="M1 1L7 7L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        ))}
+      {/* All brands */}
+      <div>
+        <div className="text-[12px] text-[var(--ink-secondary)] uppercase font-medium mb-3 tracking-wider">
+          {search ? 'Результаты' : 'Все марки'}
+        </div>
+        <div className="space-y-2">
+          {filtered.map((brand, index) => (
+            <button
+              key={brand.id}
+              onClick={() => handleSelect(brand.id, brand.name)}
+              className="w-full flex items-center gap-4 p-4 bg-[var(--card)] rounded-[13px] shadow-[var(--shadow-card)] active:scale-[0.98] transition-transform duration-200 text-left spring-up"
+              style={{ animationDelay: `${index * 30}ms` }}
+            >
+              <div className="w-[44px] h-[44px] rounded-[10px] bg-[var(--fill)] flex items-center justify-center text-[22px]">
+                {brand.logo}
+              </div>
+              <div className="flex-1">
+                <div className="text-[16px] font-semibold text-[var(--ink)]">{brand.name}</div>
+                <div className="text-[12px] text-[var(--ink-secondary)]">{brand.country} • {brand.models.length} моделей</div>
+              </div>
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="opacity-30">
+                <path d="M1 1L7 7L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
