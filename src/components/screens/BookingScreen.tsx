@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { getServiceById } from '@/data/services'
+import { getServiceById, getTotalPriceMin } from '@/data/services'
 import { SavedCar } from '@/hooks/useCarStore'
 import { Button } from '@/components/ui/Button'
 import { t } from '@/lib/i18n'
@@ -36,6 +36,8 @@ export function BookingScreen({ serviceId, car, onConfirm, onBack }: BookingScre
   const [loading, setLoading] = useState(false)
 
   if (!service) return null
+
+  const totalMin = getTotalPriceMin(service)
 
   // Get min date (today)
   const today = new Date().toISOString().split('T')[0]
@@ -91,7 +93,7 @@ export function BookingScreen({ serviceId, car, onConfirm, onBack }: BookingScre
                 {t(service.nameKey)}
               </div>
               <div className="text-[13px] text-[var(--ink-secondary)]">
-                {service.duration} {t('to.minutes')} • {t('to.from')} {service.priceFrom.toLocaleString('ru-RU')} ₽
+                {service.duration} {t('to.minutes')} • от {totalMin.toLocaleString('ru-RU')} ₽
               </div>
             </div>
           </div>

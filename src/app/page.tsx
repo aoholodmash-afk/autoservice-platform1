@@ -13,6 +13,7 @@ import { CarWizard } from '@/components/wizard/CarWizard'
 import { MyCarsScreen } from '@/components/screens/MyCarsScreen'
 import { MainMenuScreen } from '@/components/screens/MainMenuScreen'
 import { TOCategoryScreen } from '@/components/screens/TOCategoryScreen'
+import { ServiceDetailScreen } from '@/components/screens/ServiceDetailScreen'
 import { BookingScreen } from '@/components/screens/BookingScreen'
 import { BookingConfirmScreen } from '@/components/screens/BookingConfirmScreen'
 
@@ -103,6 +104,10 @@ export default function HomePage() {
 
   const handleSelectService = (serviceId: string) => {
     setSelectedService(serviceId)
+    setScreen('service-detail')
+  }
+
+  const handleBookFromDetail = () => {
     setScreen('booking')
   }
 
@@ -218,6 +223,15 @@ export default function HomePage() {
             category={selectedCategory as any}
             onSelectService={handleSelectService}
             onBack={() => setScreen('main-menu')}
+          />
+        )}
+
+        {screen === 'service-detail' && selectedCar && (
+          <ServiceDetailScreen
+            serviceId={selectedService}
+            car={selectedCar}
+            onBook={handleBookFromDetail}
+            onBack={() => setScreen('category')}
           />
         )}
 
