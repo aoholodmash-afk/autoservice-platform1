@@ -8,7 +8,7 @@ import { MOCK_STOCK, getStockCategories, getStockStatus, getLowStockItems, Stock
 
 // ===== TYPES =====
 
-type AdminSection = 'dashboard' | 'services' | 'clients' | 'journal' | 'stock' | 'reports' | 'bookings' | 'new-order'
+type AdminSection = 'dashboard' | 'services' | 'clients' | 'journal' | 'stock' | 'reports' | 'bookings' | 'new-order' | 'schedule'
 
 // ===== MAIN COMPONENT =====
 
@@ -37,6 +37,7 @@ export default function AdminPage() {
   const navItems = [
     { id: 'dashboard' as AdminSection, icon: '📊', label: 'Дашборд' },
     { id: 'new-order' as AdminSection, icon: '➕', label: 'Новый заказ' },
+    { id: 'schedule' as AdminSection, icon: '🗓', label: 'Расписание' },
     { id: 'services' as AdminSection, icon: '🔧', label: 'Услуги и цены' },
     { id: 'bookings' as AdminSection, icon: '📅', label: 'Записи' },
     { id: 'clients' as AdminSection, icon: '👥', label: 'Клиенты' },
@@ -134,6 +135,7 @@ export default function AdminPage() {
           {section === 'new-order' && <NewOrderSection stockItems={stockItems} onStockMovement={addStockMovement} />}
           {section === 'services' && <ServicesSection />}
           {section === 'bookings' && <BookingsSection />}
+          {section === 'schedule' && <ScheduleSection />}
           {section === 'clients' && <ClientsSection />}
           {section === 'stock' && <StockSection stockItems={stockItems} setStockItems={setStockItems} movements={stockMovements} onAddMovement={addStockMovement} />}
           {section === 'journal' && <JournalSection />}
@@ -1074,6 +1076,474 @@ function BookingsSection() {
           </table>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ===== SCHEDULE =====
+
+interface ScheduleSlot {
+  id: string
+  time: string
+  duration: number       // минуты
+  clientId?: string
+  clientName?: string
+  clientPhone?: string
+  car?: string
+  service?: string
+  mechanicId: string
+  mechanicName: string
+  status: 'free' | 'booked' | 'in_progress' | 'completed'
+  orderId?: string
+}
+
+interface Mechanic {
+  id: string
+  name: string
+  box: number
+  color: string
+  specializations: string[]
+}
+
+const MECHANICS: Mechanic[] = [
+  { id: 'm1', name: 'Сидоров Алексей', box: 1, color: '#007AFF', specializations: ['ТО', 'Двигатель', 'ГРМ', 'Сцепление'] },
+  { id: 'm2', name: 'Иванов Пётр', box: 2, color: '#34C759', specializations: ['Тормоза', 'Подвеска', 'Электрика'] },
+  { id: 'm3', name: 'Козлов Дмитрий', box: 3, color: '#FF9500', specializations: ['ТО', 'Шиномонтаж', 'Кузов'] },
+]
+
+const TIME_SLOTS = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30']
+
+function generateWeekDays(): string[] {
+  const today = new Date()
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - today.getDay() + 1)
+  const days: string[] = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    days.push(d.toISOString().split('T')[0])
+  }
+  return days
+}
+
+function generateMockSchedule(weekDays: string[]): ScheduleSlot[] {
+  const slots: ScheduleSlot[] = []
+  const bookings = [
+    { day: 0, time: '09:00', mechanic: 'm1', client: 'Козлов Дмитрий', phone: '+7 916 123-45-67', car: 'Lada Vesta 2020', service: 'Замена масла', duration: 30, status: 'completed' as const },
+    { day: 0, time: '10:00', mechanic: 'm1', client: 'Смирнов Олег', phone: '+7 903 111-22-33', car: 'Lada XRAY 2021', service: 'Комплексное ТО', duration: 120, status: 'in_progress' as const },
+    { day: 0, time: '09:30', mechanic: 'm2', client: 'Петрова Мария', phone: '+7 916 987-65-43', car: 'Lada Granta 2019', service: 'Замена колодок', duration: 45, status: 'completed' as const },
+    { day: 0, time: '11:00', mechanic: 'm2', client: 'Алексеева Анна', phone: '+7 916 555-66-77', car: 'Lada Kalina 2016', service: 'Диагностика', duration: 30, status: 'booked' as const },
+    { day: 0, time: '14:00', mechanic: 'm1', client: 'Иванов Сергей', phone: '+7 903 222-33-44', car: 'Lada Priora 2015', service: 'Замена ГРМ', duration: 120, status: 'booked' as const },
+    { day: 1, time: '09:00', mechanic: 'm1', client: 'Волков Андрей', phone: '+7 903 777-88-99', car: 'Lada Largus 2020', service: 'Замена масла', duration: 30, status: 'booked' as const },
+    { day: 1, time: '10:00', mechanic: 'm2', client: 'Козлов Дмитрий', phone: '+7 916 123-45-67', car: 'Lada Vesta 2020', service: 'Замена тормозной жидкости', duration: 30, status: 'booked' as const },
+    { day: 1, time: '14:00', mechanic: 'm3', client: 'Петрова Мария', phone: '+7 916 987-65-43', car: 'Lada Granta 2019', service: 'Замена шин', duration: 60, status: 'booked' as const },
+    { day: 2, time: '09:00', mechanic: 'm1', client: 'Смирнов Олег', phone: '+7 903 111-22-33', car: 'Lada Niva 2018', service: 'Замена сцепления', duration: 240, status: 'booked' as const },
+    { day: 3, time: '11:00', mechanic: 'm2', client: 'Алексеева Анна', phone: '+7 916 555-66-77', car: 'Lada Kalina 2016', service: 'Комплексное ТО', duration: 120, status: 'booked' as const },
+    { day: 4, time: '09:00', mechanic: 'm1', client: 'Козлов Дмитрий', phone: '+7 916 123-45-67', car: 'Lada Vesta 2020', service: 'Замена свечей', duration: 20, status: 'booked' as const },
+    { day: 4, time: '15:00', mechanic: 'm3', client: 'Иванов Сергей', phone: '+7 903 222-33-44', car: 'Lada Priora 2015', service: 'Замена колодок', duration: 45, status: 'booked' as const },
+  ]
+
+  bookings.forEach(b => {
+    if (b.day < weekDays.length) {
+      const mechanic = MECHANICS.find(m => m.id === b.mechanic)!
+      slots.push({
+        id: `s-${b.day}-${b.time}-${b.mechanic}`,
+        time: b.time,
+        duration: b.duration,
+        clientId: `c-${b.client}`,
+        clientName: b.client,
+        clientPhone: b.phone,
+        car: b.car,
+        service: b.service,
+        mechanicId: b.mechanic,
+        mechanicName: mechanic.name,
+        status: b.status,
+      })
+    }
+  })
+
+  return slots
+}
+
+function ScheduleSection() {
+  const [weekDays] = useState(generateWeekDays)
+  const [selectedDay, setSelectedDay] = useState(0)
+  const [schedule] = useState(() => generateMockSchedule(weekDays))
+  const [showBookingForm, setShowBookingForm] = useState(false)
+  const [selectedSlot, setSelectedSlot] = useState<ScheduleSlot | null>(null)
+
+  const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+  const today = new Date().toISOString().split('T')[0]
+
+  const getDaySlots = (dayIndex: number) => {
+    return schedule.filter(s => {
+      const slotDay = weekDays.findIndex(d => d === weekDays[dayIndex])
+      return slotDay === dayIndex
+    })
+  }
+
+  const getMechanicSlots = (dayIndex: number, mechanicId: string) => {
+    return getDaySlots(dayIndex).filter(s => s.mechanicId === mechanicId)
+  }
+
+  const isSlotBusy = (dayIndex: number, mechanicId: string, time: string) => {
+    const mechanicSlots = getMechanicSlots(dayIndex, mechanicId)
+    return mechanicSlots.find(s => {
+      if (s.time === time) return true
+      const slotMinutes = parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1])
+      const checkMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1])
+      return checkMinutes >= slotMinutes && checkMinutes < slotMinutes + s.duration
+    })
+  }
+
+  const statusColors: Record<string, { bg: string; text: string; label: string }> = {
+    free: { bg: 'bg-[#F2F2F7]', text: 'text-[#8E8E93]', label: 'Свободно' },
+    booked: { bg: 'bg-[#007AFF] bg-opacity-15', text: 'text-[#007AFF]', label: 'Записан' },
+    in_progress: { bg: 'bg-[#FF9500] bg-opacity-15', text: 'text-[#FF9500]', label: 'В работе' },
+    completed: { bg: 'bg-[#34C759] bg-opacity-15', text: 'text-[#34C759]', label: 'Выполнен' },
+  }
+
+  const daySlotCount = (dayIndex: number) => {
+    return getDaySlots(dayIndex).filter(s => s.status !== 'free').length
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Week calendar header */}
+      <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+        <div className="grid grid-cols-7">
+          {weekDays.map((day, i) => {
+            const isToday = day === today
+            const slotCount = daySlotCount(i)
+            return (
+              <button
+                key={day}
+                onClick={() => setSelectedDay(i)}
+                className={`py-3 text-center transition-colors ${
+                  selectedDay === i ? 'bg-[#007AFF]' : isToday ? 'bg-[#007AFF] bg-opacity-10' : 'hover:bg-[#F2F2F7]'
+                }`}
+              >
+                <div className={`text-[11px] font-medium ${selectedDay === i ? 'text-white/70' : 'text-[#8E8E93]'}`}>
+                  {dayNames[i]}
+                </div>
+                <div className={`text-[18px] font-bold ${selectedDay === i ? 'text-white' : isToday ? 'text-[#007AFF]' : 'text-[#1C1C1E]'}`}>
+                  {new Date(day).getDate()}
+                </div>
+                {slotCount > 0 && (
+                  <div className="flex justify-center mt-1">
+                    <div className={`w-5 h-3 rounded-full text-[9px] font-bold flex items-center justify-center ${
+                      selectedDay === i ? 'bg-white/30 text-white' : 'bg-[#007AFF] text-white'
+                    }`}>
+                      {slotCount}
+                    </div>
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Day summary */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-[17px] font-semibold text-[#1C1C1E]">
+            {new Date(weekDays[selectedDay]).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </h3>
+          <p className="text-[13px] text-[#8E8E93]">
+            {daySlotCount(selectedDay)} записей • {MECHANICS.length} мастеров
+          </p>
+        </div>
+        <button
+          onClick={() => setShowBookingForm(true)}
+          className="h-[36px] px-4 bg-[#34C759] text-white rounded-[10px] text-[13px] font-semibold"
+        >
+          + Записать
+        </button>
+      </div>
+
+      {/* Booking form modal */}
+      {showBookingForm && (
+        <BookingFormModal
+          mechanics={MECHANICS}
+          day={weekDays[selectedDay]}
+          onClose={() => setShowBookingForm(false)}
+          onSave={(slot) => {
+            setShowBookingForm(false)
+          }}
+        />
+      )}
+
+      {/* Slot detail modal */}
+      {selectedSlot && (
+        <SlotDetailModal
+          slot={selectedSlot}
+          onClose={() => setSelectedSlot(null)}
+        />
+      )}
+
+      {/* Timeline grid */}
+      <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+        {/* Mechanic headers */}
+        <div className="grid border-b border-[#E5E5EA]" style={{ gridTemplateColumns: `60px repeat(${MECHANICS.length}, 1fr)` }}>
+          <div className="px-2 py-3 bg-[#F2F2F7] text-[11px] text-[#8E8E93] font-medium">Время</div>
+          {MECHANICS.map(m => (
+            <div key={m.id} className="px-2 py-3 bg-[#F2F2F7] text-center">
+              <div className="text-[13px] font-semibold text-[#1C1C1E]">{m.name.split(' ')[0]}</div>
+              <div className="text-[10px] text-[#8E8E93]">Бокс {m.box}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Time rows */}
+        <div className="max-h-[500px] overflow-y-auto">
+          {TIME_SLOTS.map(time => (
+            <div key={time} className="grid border-b border-[#E5E5EA] last:border-b-0" style={{ gridTemplateColumns: `60px repeat(${MECHANICS.length}, 1fr)` }}>
+              <div className="px-2 py-2 text-[12px] text-[#8E8E93] font-mono bg-[#F2F2F7] flex items-start">
+                {time}
+              </div>
+              {MECHANICS.map(mechanic => {
+                const slot = isSlotBusy(selectedDay, mechanic.id, time)
+                if (slot && slot.time === time) {
+                  const colors = statusColors[slot.status]
+                  const slotSpan = Math.ceil(slot.duration / 30)
+                  return (
+                    <div
+                      key={mechanic.id}
+                      className={`px-2 py-1.5 ${colors.bg} border-l border-[#E5E5EA] cursor-pointer hover:brightness-95 transition-all`}
+                      style={{ gridRow: `span ${slotSpan}`, minHeight: `${slotSpan * 40}px` }}
+                      onClick={() => setSelectedSlot(slot)}
+                    >
+                      <div className={`text-[12px] font-semibold ${colors.text}`}>
+                        {slot.clientName?.split(' ')[0]}
+                      </div>
+                      <div className="text-[10px] text-[#8E8E93] truncate">{slot.service}</div>
+                      <div className="text-[10px] text-[#8E8E93]">{slot.car?.split(' ').slice(0, 2).join(' ')}</div>
+                      <div className={`text-[9px] font-medium ${colors.text} mt-0.5`}>{colors.label}</div>
+                    </div>
+                  )
+                }
+                if (slot) return null // Skip if covered by a previous multi-slot
+                return (
+                  <div
+                    key={mechanic.id}
+                    className="px-2 py-2 border-l border-[#E5E5EA] hover:bg-[#F2F2F7] cursor-pointer transition-colors"
+                    onClick={() => setShowBookingForm(true)}
+                  >
+                    <div className="text-[10px] text-[#8E8E93] opacity-50">—</div>
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mechanic status cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {MECHANICS.map(mechanic => {
+          const daySlots = getMechanicSlots(selectedDay, mechanic.id)
+          const busySlots = daySlots.filter(s => s.status === 'in_progress' || s.status === 'booked')
+          const completedSlots = daySlots.filter(s => s.status === 'completed')
+          const totalBusyMinutes = busySlots.reduce((s, slot) => s + slot.duration, 0)
+          const workStart = 9 * 60 // 09:00
+          const workEnd = 18 * 60  // 18:00
+          const workMinutes = workEnd - workStart
+          const loadPercent = Math.round((totalBusyMinutes / workMinutes) * 100)
+
+          return (
+            <div key={mechanic.id} className="bg-white rounded-[13px] shadow-sm p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[14px]" style={{ backgroundColor: mechanic.color }}>
+                  {mechanic.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="text-[14px] font-semibold text-[#1C1C1E]">{mechanic.name}</div>
+                  <div className="text-[11px] text-[#8E8E93]">Бокс {mechanic.box} • {mechanic.specializations.join(', ')}</div>
+                </div>
+              </div>
+              <div className="mb-2">
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span className="text-[#8E8E93]">Загрузка</span>
+                  <span className="font-medium text-[#1C1C1E]">{loadPercent}%</span>
+                </div>
+                <div className="h-2 bg-[#F2F2F7] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${loadPercent}%`,
+                      backgroundColor: loadPercent > 80 ? '#FF3B30' : loadPercent > 50 ? '#FF9500' : '#34C759',
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 text-[11px]">
+                <span className="text-[#34C759]">✓ {completedSlots.length}</span>
+                <span className="text-[#007AFF]">◉ {busySlots.length}</span>
+                <span className="text-[#8E8E93]">своб. {TIME_SLOTS.length - daySlots.length}</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// Booking form modal
+function BookingFormModal({ mechanics, day, onClose, onSave }: { mechanics: Mechanic[]; day: string; onClose: () => void; onSave: (slot: ScheduleSlot) => void }) {
+  const [clientName, setClientName] = useState('')
+  const [clientPhone, setClientPhone] = useState('')
+  const [car, setCar] = useState('')
+  const [service, setService] = useState('')
+  const [mechanicId, setMechanicId] = useState(mechanics[0].id)
+  const [time, setTime] = useState('09:00')
+  const [duration, setDuration] = useState('30')
+
+  const handleSubmit = () => {
+    if (!clientName || !service) return
+    const mechanic = mechanics.find(m => m.id === mechanicId)!
+    onSave({
+      id: `s-${Date.now()}`,
+      time,
+      duration: parseInt(duration),
+      clientName,
+      clientPhone,
+      car,
+      service,
+      mechanicId,
+      mechanicName: mechanic.name,
+      status: 'booked',
+    })
+    onClose()
+  }
+
+  return (
+    <div className="bg-white rounded-[13px] shadow-sm border-2 border-[#34C759] p-5">
+      <h4 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">
+        📅 Новая запись — {new Date(day).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+      </h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Клиент *</label>
+          <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Имя клиента" className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#34C759] focus:ring-opacity-30" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Телефон</label>
+          <input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="+7 999 123-45-67" className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Автомобиль</label>
+          <input value={car} onChange={(e) => setCar(e.target.value)} placeholder="Lada Vesta 2020" className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Услуга *</label>
+          <select value={service} onChange={(e) => setService(e.target.value)} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none">
+            <option value="">Выберите...</option>
+            <option value="Замена масла">Замена масла (30 мин)</option>
+            <option value="Замена колодок">Замена колодок (45 мин)</option>
+            <option value="Комплексное ТО">Комплексное ТО (120 мин)</option>
+            <option value="Замена ГРМ">Замена ГРМ (120 мин)</option>
+            <option value="Диагностика">Диагностика (30 мин)</option>
+            <option value="Замена шин">Замена шин (60 мин)</option>
+            <option value="Замена свечей">Замена свечей (20 мин)</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Мастер</label>
+          <select value={mechanicId} onChange={(e) => setMechanicId(e.target.value)} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none">
+            {mechanics.map(m => <option key={m.id} value={m.id}>{m.name} (Бокс {m.box})</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Время</label>
+          <select value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none">
+            {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Длительность</label>
+          <select value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none">
+            <option value="20">20 мин</option>
+            <option value="30">30 мин</option>
+            <option value="45">45 мин</option>
+            <option value="60">60 мин</option>
+            <option value="90">90 мин</option>
+            <option value="120">120 мин</option>
+            <option value="180">180 мин</option>
+            <option value="240">240 мин</option>
+          </select>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={handleSubmit} disabled={!clientName || !service} className="h-[36px] px-6 bg-[#34C759] text-white rounded-[10px] text-[13px] font-semibold disabled:opacity-40">Записать</button>
+        <button onClick={onClose} className="h-[36px] px-4 bg-[#F2F2F7] text-[#8E8E93] rounded-[10px] text-[13px]">Отмена</button>
+      </div>
+    </div>
+  )
+}
+
+// Slot detail modal
+function SlotDetailModal({ slot, onClose }: { slot: ScheduleSlot; onClose: () => void }) {
+  const colors: Record<string, { bg: string; text: string; label: string }> = {
+    booked: { bg: 'bg-[#007AFF]', text: 'text-white', label: 'Записан' },
+    in_progress: { bg: 'bg-[#FF9500]', text: 'text-white', label: 'В работе' },
+    completed: { bg: 'bg-[#34C759]', text: 'text-white', label: 'Выполнен' },
+    free: { bg: 'bg-[#F2F2F7]', text: 'text-[#1C1C1E]', label: 'Свободно' },
+  }
+  const c = colors[slot.status]
+
+  return (
+    <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+      <div className={`${c.bg} px-5 py-3 flex items-center justify-between`}>
+        <span className={`text-[15px] font-semibold ${c.text}`}>{c.label}</span>
+        <button onClick={onClose} className={`${c.text} opacity-70 hover:opacity-100`}>✕</button>
+      </div>
+      <div className="px-5 py-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] text-[#8E8E93]">Время</span>
+          <span className="text-[15px] font-semibold text-[#1C1C1E]">{slot.time} ({slot.duration} мин)</span>
+        </div>
+        {slot.clientName && (
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] text-[#8E8E93]">Клиент</span>
+            <span className="text-[15px] text-[#1C1C1E]">{slot.clientName}</span>
+          </div>
+        )}
+        {slot.clientPhone && (
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] text-[#8E8E93]">Телефон</span>
+            <a href={`tel:${slot.clientPhone}`} className="text-[15px] text-[#007AFF]">{slot.clientPhone}</a>
+          </div>
+        )}
+        {slot.car && (
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] text-[#8E8E93]">Автомобиль</span>
+            <span className="text-[15px] text-[#1C1C1E]">{slot.car}</span>
+          </div>
+        )}
+        {slot.service && (
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] text-[#8E8E93]">Услуга</span>
+            <span className="text-[15px] font-medium text-[#1C1C1E]">{slot.service}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] text-[#8E8E93]">Мастер</span>
+          <span className="text-[15px] text-[#1C1C1E]">{slot.mechanicName}</span>
+        </div>
+      </div>
+      {slot.status === 'booked' && (
+        <div className="px-5 pb-4 flex gap-2">
+          <button className="flex-1 h-[36px] bg-[#34C759] text-white rounded-[10px] text-[13px] font-semibold">Начать работу</button>
+          <button className="h-[36px] px-4 bg-[#FF3B30] text-white rounded-[10px] text-[13px] font-semibold">Отменить</button>
+        </div>
+      )}
+      {slot.status === 'in_progress' && (
+        <div className="px-5 pb-4">
+          <button className="w-full h-[36px] bg-[#34C759] text-white rounded-[10px] text-[13px] font-semibold">Завершить</button>
+        </div>
+      )}
     </div>
   )
 }
