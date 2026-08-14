@@ -17,6 +17,19 @@ export default function AdminPage() {
   const [section, setSection] = useState<AdminSection>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // Shared stock state
+  const [stockItems, setStockItems] = useState<StockItem[]>(MOCK_STOCK)
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>(MOCK_MOVEMENTS)
+
+  const addStockMovement = (movement: StockMovement) => {
+    setStockMovements(prev => [movement, ...prev])
+    if (movement.type === 'incoming') {
+      setStockItems(prev => prev.map(i => i.id === movement.itemId ? { ...i, quantity: i.quantity + movement.quantity, status: 'in_stock' as const } : i))
+    } else {
+      setStockItems(prev => prev.map(i => i.id === movement.itemId ? { ...i, quantity: Math.max(0, i.quantity - movement.quantity) } : i))
+    }
+  }
+
   if (!authenticated) {
     return <LoginPage onLogin={() => setAuthenticated(true)} />
   }
@@ -118,13 +131,13 @@ export default function AdminPage() {
         {/* Page content */}
         <main className="p-4 lg:p-6">
           {section === 'dashboard' && <DashboardSection />}
-          {section === 'new-order' && <NewOrderSection />}
+          {section === 'new-order' && <NewOrderSection stockItems={stockItems} onStockMovement={addStockMovement} />}
           {section === 'services' && <ServicesSection />}
           {section === 'bookings' && <BookingsSection />}
           {section === 'clients' && <ClientsSection />}
-          {section === 'stock' && <StockSection />}
+          {section === 'stock' && <StockSection stockItems={stockItems} setStockItems={setStockItems} movements={stockMovements} onAddMovement={addStockMovement} />}
           {section === 'journal' && <JournalSection />}
-          {section === 'reports' && <ReportsSection />}
+          {section === 'reports' && <ReportsSection stockItems={stockItems} />}
         </main>
       </div>
     </div>
@@ -283,10 +296,10 @@ interface OrderItem {
   partsPriceMin: number
   partsPriceMax: number
   duration: number
-  selectedParts: { name: string; brand: string; price: number; quantity: number }[]
+  selectedParts: { stockItemId: string; name: string; brand: string; price: number; quantity: number; available: number }[]
 }
 
-function NewOrderSection() {
+function NewOrderSection({ stockItems, onStockMovement }: { stockItems: StockItem[]; onStockMovement: (m: StockMovement) => void }) {
   const [step, setStep] = useState<'client' | 'car' | 'services' | 'review' | 'done'>('client')
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [selectedCar, setSelectedCar] = useState<ClientCar | null>(null)
@@ -294,6 +307,7 @@ function NewOrderSection() {
   const [searchClient, setSearchClient] = useState('')
   const [orderNumber, setOrderNumber] = useState('')
   const [notes, setNotes] = useState('')
+  const [deductedParts, setDeductedParts] = useState<{ name: string; brand: string; quantity: number; price: number; total: number }[]>([])
 
   const filteredClients = MOCK_CLIENTS.filter(c =>
     c.name.toLowerCase().includes(searchClient.toLowerCase()) || c.phone.includes(searchClient)
@@ -315,6 +329,20 @@ function NewOrderSection() {
       if (exists) {
         return prev.filter(i => i.serviceId !== service.id)
       }
+      // Match service parts with stock items
+      const matchedParts = service.parts.map(sp => {
+        const stockItem = stockItems.find(si =>
+          si.article === sp.article || si.name.toLowerCase().includes(sp.name.toLowerCase().split(' ')[0])
+        )
+        return {
+          stockItemId: stockItem?.id || '',
+          name: sp.name,
+          brand: sp.brand,
+          price: sp.priceMin,
+          quantity: 1,
+          available: stockItem?.quantity || 0,
+        }
+      })
       return [...prev, {
         serviceId: service.id,
         serviceName: service.nameKey,
@@ -322,14 +350,21 @@ function NewOrderSection() {
         partsPriceMin: service.partsPriceMin,
         partsPriceMax: service.partsPriceMax,
         duration: service.duration,
-        selectedParts: service.parts.slice(0, 2).map(p => ({
-          name: p.name,
-          brand: p.brand,
-          price: p.priceMin,
-          quantity: 1,
-        })),
+        selectedParts: matchedParts,
       }]
     })
+  }
+
+  const updatePartQuantity = (serviceId: string, partIndex: number, delta: number) => {
+    setOrderItems(prev => prev.map(item => {
+      if (item.serviceId !== serviceId) return item
+      const newParts = item.selectedParts.map((p, i) => {
+        if (i !== partIndex) return p
+        const newQty = Math.max(1, Math.min(p.available, p.quantity + delta))
+        return { ...p, quantity: newQty }
+      })
+      return { ...item, selectedParts: newParts }
+    }))
   }
 
   const removeItem = (serviceId: string) => {
@@ -340,8 +375,43 @@ function NewOrderSection() {
   const totalParts = orderItems.reduce((sum, i) => sum + i.selectedParts.reduce((s, p) => s + p.price * p.quantity, 0), 0)
   const totalTime = orderItems.reduce((sum, i) => sum + i.duration, 0)
 
+  const hasStockIssues = orderItems.some(item =>
+    item.selectedParts.some(p => p.stockItemId && p.quantity > p.available)
+  )
+
   const createOrder = () => {
     const num = `WO-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`
+
+    // Deduct parts from stock
+    const deducted: typeof deductedParts = []
+    orderItems.forEach(item => {
+      item.selectedParts.forEach(part => {
+        if (part.stockItemId && part.quantity > 0) {
+          onStockMovement({
+            id: `m${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            itemId: part.stockItemId,
+            itemName: part.name,
+            itemArticle: '',
+            type: 'outgoing',
+            quantity: part.quantity,
+            price: part.price,
+            total: part.price * part.quantity,
+            date: new Date().toISOString(),
+            orderNumber: num,
+            responsible: 'Админ',
+          })
+          deducted.push({
+            name: part.name,
+            brand: part.brand,
+            quantity: part.quantity,
+            price: part.price,
+            total: part.price * part.quantity,
+          })
+        }
+      })
+    })
+
+    setDeductedParts(deducted)
     setOrderNumber(num)
     setStep('done')
   }
@@ -552,12 +622,29 @@ function NewOrderSection() {
                   <span className="text-[15px] font-semibold text-[#1C1C1E]">{item.laborPrice.toLocaleString('ru-RU')} ₽</span>
                 </div>
                 <div className="ml-8 space-y-1">
-                  {item.selectedParts.map((part, pi) => (
-                    <div key={pi} className="flex items-center justify-between text-[13px]">
-                      <span className="text-[#8E8E93]">{part.brand} {part.name} × {part.quantity}</span>
-                      <span className="text-[#1C1C1E]">{(part.price * part.quantity).toLocaleString('ru-RU')} ₽</span>
-                    </div>
-                  ))}
+                  {item.selectedParts.map((part, pi) => {
+                    const isLow = part.stockItemId && part.available <= 3 && part.available > 0
+                    const isOut = part.stockItemId && part.available === 0
+                    const isOver = part.stockItemId && part.quantity > part.available
+                    return (
+                      <div key={pi} className="flex items-center justify-between text-[13px]">
+                        <span className="text-[#8E8E93] flex items-center gap-2">
+                          {part.brand} {part.name}
+                          <span className="inline-flex items-center gap-0.5">
+                            <button onClick={() => updatePartQuantity(item.serviceId, pi, -1)} className="w-5 h-5 rounded bg-[#F2F2F7] text-[11px] flex items-center justify-center hover:bg-[#E5E5EA]">−</button>
+                            <span className="w-6 text-center font-medium text-[#1C1C1E]">×{part.quantity}</span>
+                            <button onClick={() => updatePartQuantity(item.serviceId, pi, 1)} className="w-5 h-5 rounded bg-[#F2F2F7] text-[11px] flex items-center justify-center hover:bg-[#E5E5EA]">+</button>
+                          </span>
+                          {part.stockItemId && (
+                            <span className={`text-[10px] px-1 rounded ${isOut ? 'bg-[#FF3B30] bg-opacity-15 text-[#FF3B30]' : isOver ? 'bg-[#FF3B30] bg-opacity-15 text-[#FF3B30]' : isLow ? 'bg-[#FF9500] bg-opacity-15 text-[#FF9500]' : 'bg-[#34C759] bg-opacity-15 text-[#34C759]'}`}>
+                              склад: {part.available}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[#1C1C1E]">{(part.price * part.quantity).toLocaleString('ru-RU')} ₽</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )
@@ -602,19 +689,30 @@ function NewOrderSection() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            onClick={createOrder}
-            className="flex-1 h-[50px] bg-[#34C759] text-white rounded-[13px] font-semibold text-[17px] active:scale-[0.98] transition-transform"
-          >
-            ✓ Создать заказ-наряд
-          </button>
-          <button
-            onClick={() => { /* Print preview */ }}
-            className="h-[50px] px-6 bg-[#F2F2F7] text-[#1C1C1E] rounded-[13px] font-semibold text-[17px]"
-          >
-            🖨
-          </button>
+        <div className="space-y-3">
+          {hasStockIssues && (
+            <div className="bg-[#FF3B30] bg-opacity-10 rounded-[13px] p-4 flex items-start gap-3">
+              <span className="text-[18px]">⚠️</span>
+              <div>
+                <p className="text-[14px] font-medium text-[#FF3B30]">Недостаточно на складе</p>
+                <p className="text-[12px] text-[#8E8E93]">Некоторые запчасти отсутствуют или количество превышает остаток. Заказ будет создан, но запчасти нужно дозаказать.</p>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-3">
+            <button
+              onClick={createOrder}
+              className="flex-1 h-[50px] bg-[#34C759] text-white rounded-[13px] font-semibold text-[17px] active:scale-[0.98] transition-transform"
+            >
+              ✓ Создать заказ-наряд
+            </button>
+            <button
+              onClick={() => { /* Print preview */ }}
+              className="h-[50px] px-6 bg-[#F2F2F7] text-[#1C1C1E] rounded-[13px] font-semibold text-[17px]"
+            >
+              🖨
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -705,6 +803,31 @@ function NewOrderSection() {
           </div>
         </div>
 
+        {/* Deducted from stock */}
+        {deductedParts.length > 0 && (
+          <div className="bg-[#FF9500] bg-opacity-10 rounded-[13px] overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#FF9500] border-opacity-20">
+              <h4 className="text-[14px] font-semibold text-[#FF9500]">📦 Списано со склада</h4>
+            </div>
+            <div className="divide-y divide-[#FF9500] divide-opacity-10">
+              {deductedParts.map((p, i) => (
+                <div key={i} className="px-4 py-2 flex items-center justify-between">
+                  <div>
+                    <span className="text-[13px] text-[#1C1C1E]">{p.brand} {p.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[13px] font-medium text-[#FF9500]">−{p.quantity} шт</span>
+                    <span className="text-[11px] text-[#8E8E93] ml-2">{p.total.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 py-2 bg-[#FF9500] bg-opacity-5">
+              <p className="text-[11px] text-[#8E8E93]">Остатки на складе обновлены автоматически</p>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-3">
           <button
@@ -720,6 +843,7 @@ function NewOrderSection() {
               setSelectedCar(null)
               setOrderItems([])
               setNotes('')
+              setDeductedParts([])
             }}
             className="flex-1 h-[50px] bg-[#007AFF] text-white rounded-[13px] font-semibold text-[17px]"
           >
@@ -1055,10 +1179,8 @@ function ClientsSection() {
 
 type StockTab = 'balance' | 'incoming' | 'outgoing' | 'movements'
 
-function StockSection() {
+function StockSection({ stockItems, setStockItems, movements, onAddMovement }: { stockItems: StockItem[]; setStockItems: React.Dispatch<React.SetStateAction<StockItem[]>>; movements: StockMovement[]; onAddMovement: (m: StockMovement) => void }) {
   const [tab, setTab] = useState<StockTab>('balance')
-  const [stockItems, setStockItems] = useState<StockItem[]>(MOCK_STOCK)
-  const [movements, setMovements] = useState<StockMovement[]>(MOCK_MOVEMENTS)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -1084,12 +1206,7 @@ function StockSection() {
   })
 
   const addMovement = (movement: StockMovement) => {
-    setMovements(prev => [movement, ...prev])
-    if (movement.type === 'incoming') {
-      setStockItems(prev => prev.map(i => i.id === movement.itemId ? { ...i, quantity: i.quantity + movement.quantity, status: 'in_stock' } : i))
-    } else {
-      setStockItems(prev => prev.map(i => i.id === movement.itemId ? { ...i, quantity: Math.max(0, i.quantity - movement.quantity) } : i))
-    }
+    onAddMovement(movement)
   }
 
   return (
@@ -1651,42 +1768,146 @@ function JournalSection() {
 
 // ===== REPORTS =====
 
-function ReportsSection() {
+function ReportsSection({ stockItems }: { stockItems?: StockItem[] }) {
+  const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month')
+
+  const periodLabels = { week: 'Неделя', month: 'Месяц', quarter: 'Квартал', year: 'Год' }
+
   const monthlyData = [
-    { month: 'Янв', revenue: 180000, orders: 28 },
-    { month: 'Фев', revenue: 195000, orders: 31 },
-    { month: 'Мар', revenue: 220000, orders: 35 },
-    { month: 'Апр', revenue: 210000, orders: 33 },
-    { month: 'Май', revenue: 240000, orders: 38 },
-    { month: 'Июн', revenue: 260000, orders: 42 },
-    { month: 'Июл', revenue: 235000, orders: 37 },
-    { month: 'Авг', revenue: 247500, orders: 43 },
+    { month: 'Янв', revenue: 180000, orders: 28, parts: 52000, labor: 128000 },
+    { month: 'Фев', revenue: 195000, orders: 31, parts: 58000, labor: 137000 },
+    { month: 'Мар', revenue: 220000, orders: 35, parts: 65000, labor: 155000 },
+    { month: 'Апр', revenue: 210000, orders: 33, parts: 62000, labor: 148000 },
+    { month: 'Май', revenue: 240000, orders: 38, parts: 71000, labor: 169000 },
+    { month: 'Июн', revenue: 260000, orders: 42, parts: 78000, labor: 182000 },
+    { month: 'Июл', revenue: 235000, orders: 37, parts: 70000, labor: 165000 },
+    { month: 'Авг', revenue: 247500, orders: 43, parts: 74000, labor: 173500 },
   ]
 
   const topServices = [
-    { name: 'Замена масла', count: 45, revenue: 67500 },
-    { name: 'Замена колодок', count: 28, revenue: 56000 },
-    { name: 'Комплексное ТО', count: 18, revenue: 90000 },
-    { name: 'Замена ГРМ', count: 12, revenue: 42000 },
-    { name: 'Диагностика', count: 35, revenue: 17500 },
+    { name: 'Замена масла', count: 45, revenue: 67500, avgPrice: 1500, trend: '+12%' },
+    { name: 'Замена колодок', count: 28, revenue: 56000, avgPrice: 2000, trend: '+8%' },
+    { name: 'Комплексное ТО', count: 18, revenue: 90000, avgPrice: 5000, trend: '+15%' },
+    { name: 'Замена ГРМ', count: 12, revenue: 42000, avgPrice: 3500, trend: '+5%' },
+    { name: 'Диагностика', count: 35, revenue: 17500, avgPrice: 500, trend: '+20%' },
+    { name: 'Замена фильтров', count: 40, revenue: 24000, avgPrice: 600, trend: '+10%' },
+    { name: 'Замена жидкостей', count: 22, revenue: 26400, avgPrice: 1200, trend: '+7%' },
   ]
 
   const maxRevenue = Math.max(...monthlyData.map(d => d.revenue))
+  const currentMonth = monthlyData[monthlyData.length - 1]
+  const prevMonth = monthlyData[monthlyData.length - 2]
+  const revenueChange = ((currentMonth.revenue - prevMonth.revenue) / prevMonth.revenue * 100).toFixed(1)
+  const ordersChange = ((currentMonth.orders - prevMonth.orders) / prevMonth.orders * 100).toFixed(1)
+
+  const lowStockItems = stockItems ? stockItems.filter(i => i.quantity <= i.minQuantity) : []
+  const outOfStockItems = stockItems ? stockItems.filter(i => i.quantity === 0) : []
+
+  const yearlyRevenue = monthlyData.reduce((s, d) => s + d.revenue, 0)
+  const yearlyOrders = monthlyData.reduce((s, d) => s + d.orders, 0)
+  const yearlyParts = monthlyData.reduce((s, d) => s + d.parts, 0)
+  const yearlyLabor = monthlyData.reduce((s, d) => s + d.labor, 0)
 
   return (
     <div className="space-y-6">
+      {/* Period selector */}
+      <div className="flex gap-2">
+        {(['week', 'month', 'quarter', 'year'] as const).map(p => (
+          <button key={p} onClick={() => setPeriod(p)}
+            className={`px-4 h-[32px] rounded-[8px] text-[12px] font-medium transition-colors ${
+              period === p ? 'bg-[#007AFF] text-white' : 'bg-white text-[#8E8E93] border border-[#E5E5EA]'
+            }`}
+          >{periodLabels[p]}</button>
+        ))}
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white rounded-[13px] p-4 shadow-sm">
+          <div className="text-[11px] text-[#8E8E93] mb-1">Выручка (авг)</div>
+          <div className="text-[22px] font-bold text-[#1C1C1E]">{(currentMonth.revenue / 1000).toFixed(0)}к ₽</div>
+          <div className={`text-[12px] font-medium ${parseFloat(revenueChange) >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
+            {parseFloat(revenueChange) >= 0 ? '↑' : '↓'} {revenueChange}% к прошлому мес.
+          </div>
+        </div>
+        <div className="bg-white rounded-[13px] p-4 shadow-sm">
+          <div className="text-[11px] text-[#8E8E93] mb-1">Заказов (авг)</div>
+          <div className="text-[22px] font-bold text-[#1C1C1E]">{currentMonth.orders}</div>
+          <div className={`text-[12px] font-medium ${parseFloat(ordersChange) >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
+            {parseFloat(ordersChange) >= 0 ? '↑' : '↓'} {ordersChange}% к прошлому мес.
+          </div>
+        </div>
+        <div className="bg-white rounded-[13px] p-4 shadow-sm">
+          <div className="text-[11px] text-[#8E8E93] mb-1">Средний чек</div>
+          <div className="text-[22px] font-bold text-[#007AFF]">{(currentMonth.revenue / currentMonth.orders).toLocaleString('ru-RU')} ₽</div>
+          <div className="text-[12px] text-[#8E8E93]">за август</div>
+        </div>
+        <div className="bg-white rounded-[13px] p-4 shadow-sm">
+          <div className="text-[11px] text-[#8E8E93] mb-1">Маржинальность</div>
+          <div className="text-[22px] font-bold text-[#34C759]">{((yearlyLabor / yearlyRevenue) * 100).toFixed(0)}%</div>
+          <div className="text-[12px] text-[#8E8E93]">доля работы в выручке</div>
+        </div>
+      </div>
+
+      {/* Stock alerts */}
+      {lowStockItems.length > 0 && (
+        <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+          <div className="px-5 py-3 bg-[#FF3B30] bg-opacity-10 border-b border-[#FF3B30] border-opacity-20 flex items-center justify-between">
+            <h3 className="text-[14px] font-semibold text-[#FF3B30] flex items-center gap-2">
+              ⚠️ Внимание: низкие остатки на складе
+            </h3>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#FF3B30] text-white">{lowStockItems.length}</span>
+          </div>
+          <div className="divide-y divide-[#E5E5EA]">
+            {lowStockItems.map(item => (
+              <div key={item.id} className="px-5 py-3 flex items-center justify-between">
+                <div>
+                  <div className="text-[14px] font-medium text-[#1C1C1E]">{item.name}</div>
+                  <div className="text-[11px] text-[#8E8E93]">{item.brand} • арт. {item.article}</div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-[16px] font-bold ${item.quantity === 0 ? 'text-[#FF3B30]' : 'text-[#FF9500]'}`}>
+                    {item.quantity} шт
+                  </div>
+                  <div className="text-[11px] text-[#8E8E93]">мин: {item.minQuantity}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 py-3 bg-[#F2F2F7]">
+            <p className="text-[12px] text-[#8E8E93]">
+              💡 Рекомендация: оформите приход для позиций с остатком ниже минимума. Стоимость дозаказа: ~{lowStockItems.reduce((s, i) => s + (i.minQuantity - i.quantity) * i.purchasePrice, 0).toLocaleString('ru-RU')} ₽
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Revenue chart */}
       <div className="bg-white rounded-[13px] shadow-sm p-5">
-        <h3 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">Выручка по месяцам</h3>
-        <div className="flex items-end gap-3 h-[200px]">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[15px] font-semibold text-[#1C1C1E]">Выручка по месяцам</h3>
+          <div className="flex items-center gap-4 text-[11px]">
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#007AFF]" /> Работа</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#5AC8FA]" /> Запчасти</span>
+          </div>
+        </div>
+        <div className="flex items-end gap-2 h-[200px]">
           {monthlyData.map((d, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div className="text-[11px] text-[#8E8E93]">{(d.revenue / 1000).toFixed(0)}к</div>
-              <div
-                className="w-full rounded-t-lg bg-gradient-to-t from-[#007AFF] to-[#5AC8FA] transition-all duration-500"
-                style={{ height: `${(d.revenue / maxRevenue) * 160}px` }}
-              />
-              <div className="text-[11px] text-[#8E8E93]">{d.month}</div>
+              <div className="text-[10px] text-[#8E8E93]">{(d.revenue / 1000).toFixed(0)}к</div>
+              <div className="w-full flex flex-col justify-end" style={{ height: '160px' }}>
+                <div
+                  className="w-full rounded-t-sm bg-[#5AC8FA] transition-all duration-500"
+                  style={{ height: `${(d.parts / maxRevenue) * 160}px` }}
+                  title={`Запчасти: ${d.parts.toLocaleString('ru-RU')} ₽`}
+                />
+                <div
+                  className="w-full bg-[#007AFF] transition-all duration-500"
+                  style={{ height: `${(d.labor / maxRevenue) * 160}px` }}
+                  title={`Работа: ${d.labor.toLocaleString('ru-RU')} ₽`}
+                />
+              </div>
+              <div className="text-[10px] text-[#8E8E93]">{d.month}</div>
             </div>
           ))}
         </div>
@@ -1696,43 +1917,77 @@ function ReportsSection() {
         {/* Top services */}
         <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-[#E5E5EA]">
-            <h3 className="text-[15px] font-semibold text-[#1C1C1E]">Топ услуг</h3>
+            <h3 className="text-[15px] font-semibold text-[#1C1C1E]">Популярные услуги</h3>
           </div>
           <div className="divide-y divide-[#E5E5EA]">
             {topServices.map((s, i) => (
-              <div key={i} className="px-5 py-3 flex items-center gap-4">
-                <div className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[13px] font-bold text-[#8E8E93]">
+              <div key={i} className="px-5 py-3 flex items-center gap-3">
+                <div className="w-7 h-7 rounded-full bg-[#007AFF] bg-opacity-10 flex items-center justify-center text-[12px] font-bold text-[#007AFF]">
                   {i + 1}
                 </div>
-                <div className="flex-1">
-                  <div className="text-[15px] font-medium text-[#1C1C1E]">{s.name}</div>
-                  <div className="text-[13px] text-[#8E8E93]">{s.count} заказов</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-medium text-[#1C1C1E]">{s.name}</div>
+                  <div className="text-[11px] text-[#8E8E93]">{s.count} заказов • ср. {s.avgPrice.toLocaleString('ru-RU')} ₽</div>
                 </div>
-                <div className="text-[15px] font-semibold text-[#1C1C1E]">{s.revenue.toLocaleString('ru-RU')} ₽</div>
+                <div className="text-right">
+                  <div className="text-[14px] font-semibold text-[#1C1C1E]">{s.revenue.toLocaleString('ru-RU')} ₽</div>
+                  <div className="text-[11px] text-[#34C759] font-medium">{s.trend}</div>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Summary */}
-        <div className="bg-white rounded-[13px] shadow-sm p-5">
-          <h3 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">Итого за 2026 год</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center py-3 border-b border-[#E5E5EA]">
-              <span className="text-[15px] text-[#8E8E93]">Общая выручка</span>
-              <span className="text-[22px] font-bold text-[#1C1C1E]">1 787 500 ₽</span>
+        {/* Yearly summary */}
+        <div className="space-y-4">
+          <div className="bg-white rounded-[13px] shadow-sm p-5">
+            <h3 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">Итого за 2026 год</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b border-[#E5E5EA]">
+                <span className="text-[14px] text-[#8E8E93]">Общая выручка</span>
+                <span className="text-[18px] font-bold text-[#1C1C1E]">{yearlyRevenue.toLocaleString('ru-RU')} ₽</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-[#E5E5EA]">
+                <span className="text-[14px] text-[#8E8E93]">Заказов выполнено</span>
+                <span className="text-[18px] font-bold text-[#1C1C1E]">{yearlyOrders}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-[#E5E5EA]">
+                <span className="text-[14px] text-[#8E8E93]">Доля работы</span>
+                <span className="text-[18px] font-bold text-[#007AFF]">{yearlyLabor.toLocaleString('ru-RU')} ₽</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-[#E5E5EA]">
+                <span className="text-[14px] text-[#8E8E93]">Доля запчастей</span>
+                <span className="text-[18px] font-bold text-[#5AC8FA]">{yearlyParts.toLocaleString('ru-RU')} ₽</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-[14px] text-[#8E8E93]">Средний чек</span>
+                <span className="text-[18px] font-bold text-[#34C759]">{(yearlyRevenue / yearlyOrders).toLocaleString('ru-RU')} ₽</span>
+              </div>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-[#E5E5EA]">
-              <span className="text-[15px] text-[#8E8E93]">Заказов выполнено</span>
-              <span className="text-[22px] font-bold text-[#1C1C1E]">287</span>
-            </div>
-            <div className="flex justify-between items-center py-3 border-b border-[#E5E5EA]">
-              <span className="text-[15px] text-[#8E8E93]">Средний чек</span>
-              <span className="text-[22px] font-bold text-[#007AFF]">6 228 ₽</span>
-            </div>
-            <div className="flex justify-between items-center py-3">
-              <span className="text-[15px] text-[#8E8E93]">Уникальных клиентов</span>
-              <span className="text-[22px] font-bold text-[#1C1C1E]">124</span>
+          </div>
+
+          {/* Profitability breakdown */}
+          <div className="bg-white rounded-[13px] shadow-sm p-5">
+            <h3 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">Структура выручки</h3>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-[13px] mb-1">
+                  <span className="text-[#8E8E93]">Работа</span>
+                  <span className="text-[#1C1C1E] font-medium">{((yearlyLabor / yearlyRevenue) * 100).toFixed(1)}%</span>
+                </div>
+                <div className="h-3 bg-[#F2F2F7] rounded-full overflow-hidden">
+                  <div className="h-full bg-[#007AFF] rounded-full" style={{ width: `${(yearlyLabor / yearlyRevenue) * 100}%` }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-[13px] mb-1">
+                  <span className="text-[#8E8E93]">Запчасти</span>
+                  <span className="text-[#1C1C1E] font-medium">{((yearlyParts / yearlyRevenue) * 100).toFixed(1)}%</span>
+                </div>
+                <div className="h-3 bg-[#F2F2F7] rounded-full overflow-hidden">
+                  <div className="h-full bg-[#5AC8FA] rounded-full" style={{ width: `${(yearlyParts / yearlyRevenue) * 100}%` }} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
