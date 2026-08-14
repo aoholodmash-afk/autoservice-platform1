@@ -33,9 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="format-detection" content="telephone=no" />
       </head>
       <body className="antialiased overscroll-y-contain">
-        <div className="mx-auto max-w-[430px] min-h-screen relative">
-          {children}
-        </div>
+        {children}
       </body>
     </html>
   )

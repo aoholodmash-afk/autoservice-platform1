@@ -184,7 +184,7 @@ export default function HomePage() {
   const showTabBar = ['my-cars', 'main-menu'].includes(screen)
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
+    <div className="mx-auto max-w-[430px] min-h-screen bg-[var(--bg)] relative">
       <div className={showTabBar ? 'pb-24' : ''}>
         {screen === 'welcome' && (
           <WelcomeScreen

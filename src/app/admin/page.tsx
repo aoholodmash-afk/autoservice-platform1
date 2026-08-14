@@ -2506,9 +2506,11 @@ function JournalSection() {
 
 function ReportsSection({ stockItems }: { stockItems?: StockItem[] }) {
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month')
+  const [reportTab, setReportTab] = useState<'overview' | 'daily' | 'mechanics' | 'services'>('overview')
 
   const periodLabels = { week: 'Неделя', month: 'Месяц', quarter: 'Квартал', year: 'Год' }
 
+  // Monthly data
   const monthlyData = [
     { month: 'Янв', revenue: 180000, orders: 28, parts: 52000, labor: 128000 },
     { month: 'Фев', revenue: 195000, orders: 31, parts: 58000, labor: 137000 },
@@ -2520,14 +2522,67 @@ function ReportsSection({ stockItems }: { stockItems?: StockItem[] }) {
     { month: 'Авг', revenue: 247500, orders: 43, parts: 74000, labor: 173500 },
   ]
 
+  // Daily data for August
+  const dailyData = [
+    { day: 1, weekday: 'Пт', revenue: 12500, orders: 2 },
+    { day: 2, weekday: 'Сб', revenue: 0, orders: 0 },
+    { day: 3, weekday: 'Вс', revenue: 0, orders: 0 },
+    { day: 4, weekday: 'Пн', revenue: 8200, orders: 1 },
+    { day: 5, weekday: 'Вт', revenue: 15400, orders: 3 },
+    { day: 6, weekday: 'Ср', revenue: 6800, orders: 1 },
+    { day: 7, weekday: 'Чт', revenue: 11200, orders: 2 },
+    { day: 8, weekday: 'Пт', revenue: 18600, orders: 3 },
+    { day: 9, weekday: 'Сб', revenue: 4500, orders: 1 },
+    { day: 10, weekday: 'Вс', revenue: 0, orders: 0 },
+    { day: 11, weekday: 'Пн', revenue: 9800, orders: 2 },
+    { day: 12, weekday: 'Вт', revenue: 14200, orders: 2 },
+    { day: 13, weekday: 'Ср', revenue: 16800, orders: 3 },
+    { day: 14, weekday: 'Чт', revenue: 22100, orders: 4 },
+    { day: 15, weekday: 'Пт', revenue: 19500, orders: 3 },
+  ]
+  const maxDailyRevenue = Math.max(...dailyData.map(d => d.revenue))
+
+  // Day of week distribution
+  const weekdayData = [
+    { day: 'Пн', revenue: 35200, orders: 6, color: '#007AFF' },
+    { day: 'Вт', revenue: 42800, orders: 7, color: '#5AC8FA' },
+    { day: 'Ср', revenue: 38400, orders: 6, color: '#34C759' },
+    { day: 'Чт', revenue: 48600, orders: 8, color: '#FF9500' },
+    { day: 'Пт', revenue: 52100, orders: 9, color: '#FF3B30' },
+    { day: 'Сб', revenue: 22500, orders: 4, color: '#5856D6' },
+    { day: 'Вс', revenue: 7800, orders: 1, color: '#8E8E93' },
+  ]
+  const maxWeekdayRevenue = Math.max(...weekdayData.map(d => d.revenue))
+
+  // Top mechanics
+  const mechanicsData = [
+    { name: 'Сидоров Алексей', orders: 52, revenue: 186000, avgTime: 65, rating: 4.8, specialties: ['ТО', 'Двигатель', 'ГРМ'], load: 78 },
+    { name: 'Иванов Пётр', orders: 38, revenue: 98000, avgTime: 45, rating: 4.6, specialties: ['Тормоза', 'Подвеска'], load: 62 },
+    { name: 'Козлов Дмитрий', orders: 24, revenue: 54000, avgTime: 55, rating: 4.4, specialties: ['ТО', 'Шиномонтаж'], load: 45 },
+  ]
+
+  // Top services
   const topServices = [
-    { name: 'Замена масла', count: 45, revenue: 67500, avgPrice: 1500, trend: '+12%' },
-    { name: 'Замена колодок', count: 28, revenue: 56000, avgPrice: 2000, trend: '+8%' },
-    { name: 'Комплексное ТО', count: 18, revenue: 90000, avgPrice: 5000, trend: '+15%' },
-    { name: 'Замена ГРМ', count: 12, revenue: 42000, avgPrice: 3500, trend: '+5%' },
-    { name: 'Диагностика', count: 35, revenue: 17500, avgPrice: 500, trend: '+20%' },
-    { name: 'Замена фильтров', count: 40, revenue: 24000, avgPrice: 600, trend: '+10%' },
-    { name: 'Замена жидкостей', count: 22, revenue: 26400, avgPrice: 1200, trend: '+7%' },
+    { name: 'Замена масла', count: 45, revenue: 67500, avgPrice: 1500, trend: '+12%', category: 'ТО' },
+    { name: 'Замена колодок', count: 28, revenue: 56000, avgPrice: 2000, trend: '+8%', category: 'Тормоза' },
+    { name: 'Комплексное ТО', count: 18, revenue: 90000, avgPrice: 5000, trend: '+15%', category: 'ТО' },
+    { name: 'Замена ГРМ', count: 12, revenue: 42000, avgPrice: 3500, trend: '+5%', category: 'Двигатель' },
+    { name: 'Диагностика', count: 35, revenue: 17500, avgPrice: 500, trend: '+20%', category: 'Диагностика' },
+    { name: 'Замена фильтров', count: 40, revenue: 24000, avgPrice: 600, trend: '+10%', category: 'ТО' },
+    { name: 'Замена жидкостей', count: 22, revenue: 26400, avgPrice: 1200, trend: '+7%', category: 'ТО' },
+    { name: 'Замена свечей', count: 18, revenue: 7200, avgPrice: 400, trend: '+3%', category: 'ТО' },
+    { name: 'Замена сцепления', count: 6, revenue: 36000, avgPrice: 6000, trend: '+2%', category: 'Двигатель' },
+    { name: 'Шиномонтаж', count: 15, revenue: 9000, avgPrice: 600, trend: '+18%', category: 'Шины' },
+  ]
+
+  // Service category distribution
+  const categoryData = [
+    { name: 'ТО', revenue: 222900, percent: 53, color: '#007AFF' },
+    { name: 'Тормоза', revenue: 62000, percent: 15, color: '#FF3B30' },
+    { name: 'Двигатель', revenue: 78000, percent: 19, color: '#FF9500' },
+    { name: 'Диагностика', revenue: 17500, percent: 4, color: '#5856D6' },
+    { name: 'Шины', revenue: 9000, percent: 2, color: '#34C759' },
+    { name: 'Прочее', revenue: 29100, percent: 7, color: '#8E8E93' },
   ]
 
   const maxRevenue = Math.max(...monthlyData.map(d => d.revenue))
@@ -2537,197 +2592,372 @@ function ReportsSection({ stockItems }: { stockItems?: StockItem[] }) {
   const ordersChange = ((currentMonth.orders - prevMonth.orders) / prevMonth.orders * 100).toFixed(1)
 
   const lowStockItems = stockItems ? stockItems.filter(i => i.quantity <= i.minQuantity) : []
-  const outOfStockItems = stockItems ? stockItems.filter(i => i.quantity === 0) : []
 
   const yearlyRevenue = monthlyData.reduce((s, d) => s + d.revenue, 0)
   const yearlyOrders = monthlyData.reduce((s, d) => s + d.orders, 0)
   const yearlyParts = monthlyData.reduce((s, d) => s + d.parts, 0)
   const yearlyLabor = monthlyData.reduce((s, d) => s + d.labor, 0)
 
+  const tabs = [
+    { id: 'overview' as const, label: 'Обзор', icon: '📊' },
+    { id: 'daily' as const, label: 'По дням', icon: '📅' },
+    { id: 'mechanics' as const, label: 'Мастера', icon: '👷' },
+    { id: 'services' as const, label: 'Услуги', icon: '🔧' },
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Period selector */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {(['week', 'month', 'quarter', 'year'] as const).map(p => (
           <button key={p} onClick={() => setPeriod(p)}
-            className={`px-4 h-[32px] rounded-[8px] text-[12px] font-medium transition-colors ${
+            className={`px-4 h-[32px] rounded-[8px] text-[12px] font-medium transition-colors whitespace-nowrap ${
               period === p ? 'bg-[#007AFF] text-white' : 'bg-white text-[#8E8E93] border border-[#E5E5EA]'
             }`}
           >{periodLabels[p]}</button>
         ))}
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-[13px] p-4 shadow-sm">
-          <div className="text-[11px] text-[#8E8E93] mb-1">Выручка (авг)</div>
-          <div className="text-[22px] font-bold text-[#1C1C1E]">{(currentMonth.revenue / 1000).toFixed(0)}к ₽</div>
-          <div className={`text-[12px] font-medium ${parseFloat(revenueChange) >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
-            {parseFloat(revenueChange) >= 0 ? '↑' : '↓'} {revenueChange}% к прошлому мес.
-          </div>
-        </div>
-        <div className="bg-white rounded-[13px] p-4 shadow-sm">
-          <div className="text-[11px] text-[#8E8E93] mb-1">Заказов (авг)</div>
-          <div className="text-[22px] font-bold text-[#1C1C1E]">{currentMonth.orders}</div>
-          <div className={`text-[12px] font-medium ${parseFloat(ordersChange) >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
-            {parseFloat(ordersChange) >= 0 ? '↑' : '↓'} {ordersChange}% к прошлому мес.
-          </div>
-        </div>
-        <div className="bg-white rounded-[13px] p-4 shadow-sm">
-          <div className="text-[11px] text-[#8E8E93] mb-1">Средний чек</div>
-          <div className="text-[22px] font-bold text-[#007AFF]">{(currentMonth.revenue / currentMonth.orders).toLocaleString('ru-RU')} ₽</div>
-          <div className="text-[12px] text-[#8E8E93]">за август</div>
-        </div>
-        <div className="bg-white rounded-[13px] p-4 shadow-sm">
-          <div className="text-[11px] text-[#8E8E93] mb-1">Маржинальность</div>
-          <div className="text-[22px] font-bold text-[#34C759]">{((yearlyLabor / yearlyRevenue) * 100).toFixed(0)}%</div>
-          <div className="text-[12px] text-[#8E8E93]">доля работы в выручке</div>
-        </div>
+      {/* Report tabs */}
+      <div className="flex gap-1 bg-[#F2F2F7] p-1 rounded-[10px] overflow-x-auto">
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setReportTab(t.id)}
+            className={`flex-1 min-w-[70px] h-[36px] rounded-[8px] text-[12px] font-medium transition-colors whitespace-nowrap ${
+              reportTab === t.id ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93]'
+            }`}
+          >{t.icon} {t.label}</button>
+        ))}
       </div>
 
-      {/* Stock alerts */}
-      {lowStockItems.length > 0 && (
-        <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
-          <div className="px-5 py-3 bg-[#FF3B30] bg-opacity-10 border-b border-[#FF3B30] border-opacity-20 flex items-center justify-between">
-            <h3 className="text-[14px] font-semibold text-[#FF3B30] flex items-center gap-2">
-              ⚠️ Внимание: низкие остатки на складе
-            </h3>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#FF3B30] text-white">{lowStockItems.length}</span>
-          </div>
-          <div className="divide-y divide-[#E5E5EA]">
-            {lowStockItems.map(item => (
-              <div key={item.id} className="px-5 py-3 flex items-center justify-between">
-                <div>
-                  <div className="text-[14px] font-medium text-[#1C1C1E]">{item.name}</div>
-                  <div className="text-[11px] text-[#8E8E93]">{item.brand} • арт. {item.article}</div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-[16px] font-bold ${item.quantity === 0 ? 'text-[#FF3B30]' : 'text-[#FF9500]'}`}>
-                    {item.quantity} шт
-                  </div>
-                  <div className="text-[11px] text-[#8E8E93]">мин: {item.minQuantity}</div>
-                </div>
+      {/* TAB: Overview */}
+      {reportTab === 'overview' && (
+        <div className="space-y-4">
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-white rounded-[13px] p-4 shadow-sm">
+              <div className="text-[11px] text-[#8E8E93] mb-1">Выручка (авг)</div>
+              <div className="text-[22px] font-bold text-[#1C1C1E]">{(currentMonth.revenue / 1000).toFixed(0)}к ₽</div>
+              <div className={`text-[12px] font-medium ${parseFloat(revenueChange) >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
+                {parseFloat(revenueChange) >= 0 ? '↑' : '↓'} {revenueChange}% к прошлому мес.
               </div>
-            ))}
+            </div>
+            <div className="bg-white rounded-[13px] p-4 shadow-sm">
+              <div className="text-[11px] text-[#8E8E93] mb-1">Заказов (авг)</div>
+              <div className="text-[22px] font-bold text-[#1C1C1E]">{currentMonth.orders}</div>
+              <div className={`text-[12px] font-medium ${parseFloat(ordersChange) >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
+                {parseFloat(ordersChange) >= 0 ? '↑' : '↓'} {ordersChange}% к прошлому мес.
+              </div>
+            </div>
+            <div className="bg-white rounded-[13px] p-4 shadow-sm">
+              <div className="text-[11px] text-[#8E8E93] mb-1">Средний чек</div>
+              <div className="text-[22px] font-bold text-[#007AFF]">{(currentMonth.revenue / currentMonth.orders).toLocaleString('ru-RU')} ₽</div>
+              <div className="text-[12px] text-[#8E8E93]">за август</div>
+            </div>
+            <div className="bg-white rounded-[13px] p-4 shadow-sm">
+              <div className="text-[11px] text-[#8E8E93] mb-1">Маржинальность</div>
+              <div className="text-[22px] font-bold text-[#34C759]">{((yearlyLabor / yearlyRevenue) * 100).toFixed(0)}%</div>
+              <div className="text-[12px] text-[#8E8E93]">доля работы в выручке</div>
+            </div>
           </div>
-          <div className="px-5 py-3 bg-[#F2F2F7]">
-            <p className="text-[12px] text-[#8E8E93]">
-              💡 Рекомендация: оформите приход для позиций с остатком ниже минимума. Стоимость дозаказа: ~{lowStockItems.reduce((s, i) => s + (i.minQuantity - i.quantity) * i.purchasePrice, 0).toLocaleString('ru-RU')} ₽
-            </p>
+
+          {/* Revenue chart */}
+          <div className="bg-white rounded-[13px] shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[14px] font-semibold text-[#1C1C1E]">Выручка по месяцам</h3>
+              <div className="flex items-center gap-3 text-[10px]">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-[#007AFF]" /> Работа</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-[#5AC8FA]" /> Запчасти</span>
+              </div>
+            </div>
+            <div className="flex items-end gap-1 sm:gap-2 h-[180px]">
+              {monthlyData.map((d, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="text-[9px] text-[#8E8E93]">{(d.revenue / 1000).toFixed(0)}к</div>
+                  <div className="w-full flex flex-col justify-end" style={{ height: '140px' }}>
+                    <div className="w-full rounded-t-sm bg-[#5AC8FA]" style={{ height: `${(d.parts / maxRevenue) * 140}px` }} />
+                    <div className="w-full bg-[#007AFF]" style={{ height: `${(d.labor / maxRevenue) * 140}px` }} />
+                  </div>
+                  <div className="text-[9px] text-[#8E8E93]">{d.month}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Category distribution */}
+          <div className="bg-white rounded-[13px] shadow-sm p-4">
+            <h3 className="text-[14px] font-semibold text-[#1C1C1E] mb-3">Структура выручки по категориям</h3>
+            <div className="space-y-2">
+              {categoryData.map((cat, i) => (
+                <div key={i}>
+                  <div className="flex justify-between text-[12px] mb-1">
+                    <span className="text-[#1C1C1E] font-medium">{cat.name}</span>
+                    <span className="text-[#8E8E93]">{cat.percent}% • {cat.revenue.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  <div className="h-2 bg-[#F2F2F7] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${cat.percent}%`, backgroundColor: cat.color }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Stock alerts */}
+          {lowStockItems.length > 0 && (
+            <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+              <div className="px-4 py-3 bg-[#FF3B30] bg-opacity-10 border-b border-[#FF3B30] border-opacity-20 flex items-center justify-between">
+                <h3 className="text-[13px] font-semibold text-[#FF3B30]">⚠️ Низкие остатки</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FF3B30] text-white">{lowStockItems.length}</span>
+              </div>
+              <div className="divide-y divide-[#E5E5EA]">
+                {lowStockItems.slice(0, 3).map(item => (
+                  <div key={item.id} className="px-4 py-2 flex items-center justify-between">
+                    <div className="text-[13px] text-[#1C1C1E]">{item.name}</div>
+                    <div className={`text-[14px] font-bold ${item.quantity === 0 ? 'text-[#FF3B30]' : 'text-[#FF9500]'}`}>{item.quantity} шт</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: Daily */}
+      {reportTab === 'daily' && (
+        <div className="space-y-4">
+          {/* Daily chart */}
+          <div className="bg-white rounded-[13px] shadow-sm p-4">
+            <h3 className="text-[14px] font-semibold text-[#1C1C1E] mb-3">Выручка по дням — Август 2026</h3>
+            <div className="flex items-end gap-0.5 sm:gap-1 h-[160px] overflow-x-auto">
+              {dailyData.map((d, i) => (
+                <div key={i} className="flex-1 min-w-[18px] flex flex-col items-center gap-0.5">
+                  {d.revenue > 0 && <div className="text-[8px] text-[#8E8E93]">{(d.revenue / 1000).toFixed(0)}к</div>}
+                  <div
+                    className={`w-full rounded-t-sm transition-all ${d.revenue === 0 ? 'bg-[#F2F2F7]' : d.weekday === 'Сб' || d.weekday === 'Вс' ? 'bg-[#8E8E93]' : 'bg-[#007AFF]'}`}
+                    style={{ height: d.revenue === 0 ? '4px' : `${(d.revenue / maxDailyRevenue) * 140}px` }}
+                  />
+                  <div className={`text-[8px] ${d.day === 14 ? 'text-[#007AFF] font-bold' : 'text-[#8E8E93]'}`}>{d.day}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Weekday distribution */}
+          <div className="bg-white rounded-[13px] shadow-sm p-4">
+            <h3 className="text-[14px] font-semibold text-[#1C1C1E] mb-3">Выручка по дням недели</h3>
+            <div className="flex items-end gap-2 h-[140px]">
+              {weekdayData.map((d, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="text-[9px] text-[#8E8E93]">{(d.revenue / 1000).toFixed(0)}к</div>
+                  <div className="w-full rounded-t-sm" style={{ height: `${(d.revenue / maxWeekdayRevenue) * 110}px`, backgroundColor: d.color }} />
+                  <div className="text-[11px] font-medium text-[#1C1C1E]">{d.day}</div>
+                  <div className="text-[9px] text-[#8E8E93]">{d.orders} зак.</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Daily summary table */}
+          <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+            <div className="px-4 py-3 bg-[#F2F2F7]">
+              <h3 className="text-[13px] font-medium text-[#8E8E93]">ДЕТАЛИ ПО ДНЯМ</h3>
+            </div>
+            <div className="divide-y divide-[#E5E5EA] max-h-[300px] overflow-y-auto">
+              {dailyData.filter(d => d.revenue > 0).map((d, i) => (
+                <div key={i} className="px-4 py-2 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[#F2F2F7] flex items-center justify-center text-[12px] font-bold text-[#1C1C1E]">{d.day}</div>
+                    <div>
+                      <div className="text-[13px] font-medium text-[#1C1C1E]">Август, {d.weekday}</div>
+                      <div className="text-[11px] text-[#8E8E93]">{d.orders} заказов</div>
+                    </div>
+                  </div>
+                  <div className="text-[15px] font-semibold text-[#1C1C1E]">{d.revenue.toLocaleString('ru-RU')} ₽</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Revenue chart */}
-      <div className="bg-white rounded-[13px] shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[15px] font-semibold text-[#1C1C1E]">Выручка по месяцам</h3>
-          <div className="flex items-center gap-4 text-[11px]">
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#007AFF]" /> Работа</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#5AC8FA]" /> Запчасти</span>
-          </div>
-        </div>
-        <div className="flex items-end gap-2 h-[200px]">
-          {monthlyData.map((d, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div className="text-[10px] text-[#8E8E93]">{(d.revenue / 1000).toFixed(0)}к</div>
-              <div className="w-full flex flex-col justify-end" style={{ height: '160px' }}>
-                <div
-                  className="w-full rounded-t-sm bg-[#5AC8FA] transition-all duration-500"
-                  style={{ height: `${(d.parts / maxRevenue) * 160}px` }}
-                  title={`Запчасти: ${d.parts.toLocaleString('ru-RU')} ₽`}
-                />
-                <div
-                  className="w-full bg-[#007AFF] transition-all duration-500"
-                  style={{ height: `${(d.labor / maxRevenue) * 160}px` }}
-                  title={`Работа: ${d.labor.toLocaleString('ru-RU')} ₽`}
-                />
-              </div>
-              <div className="text-[10px] text-[#8E8E93]">{d.month}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* TAB: Mechanics */}
+      {reportTab === 'mechanics' && (
+        <div className="space-y-4">
+          {/* Mechanics ranking */}
+          <div className="space-y-3">
+            {mechanicsData.map((m, i) => (
+              <div key={i} className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+                <div className="p-4">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-[16px] ${
+                      i === 0 ? 'bg-[#FF9500]' : i === 1 ? 'bg-[#8E8E93]' : 'bg-[#CD7F32]'
+                    }`}>
+                      {i + 1}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-[16px] font-semibold text-[#1C1C1E]">{m.name}</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[12px] text-[#FF9500]">⭐ {m.rating}</span>
+                        <span className="text-[12px] text-[#8E8E93]">•</span>
+                        {m.specialties.map((s, si) => (
+                          <span key={si} className="px-1.5 py-0.5 bg-[#F2F2F7] rounded text-[10px] text-[#8E8E93]">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top services */}
-        <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#E5E5EA]">
-            <h3 className="text-[15px] font-semibold text-[#1C1C1E]">Популярные услуги</h3>
-          </div>
-          <div className="divide-y divide-[#E5E5EA]">
-            {topServices.map((s, i) => (
-              <div key={i} className="px-5 py-3 flex items-center gap-3">
-                <div className="w-7 h-7 rounded-full bg-[#007AFF] bg-opacity-10 flex items-center justify-center text-[12px] font-bold text-[#007AFF]">
-                  {i + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[14px] font-medium text-[#1C1C1E]">{s.name}</div>
-                  <div className="text-[11px] text-[#8E8E93]">{s.count} заказов • ср. {s.avgPrice.toLocaleString('ru-RU')} ₽</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[14px] font-semibold text-[#1C1C1E]">{s.revenue.toLocaleString('ru-RU')} ₽</div>
-                  <div className="text-[11px] text-[#34C759] font-medium">{s.trend}</div>
+                  {/* Stats */}
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    <div className="text-center">
+                      <div className="text-[18px] font-bold text-[#007AFF]">{m.orders}</div>
+                      <div className="text-[10px] text-[#8E8E93]">Заказов</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[18px] font-bold text-[#34C759]">{(m.revenue / 1000).toFixed(0)}к ₽</div>
+                      <div className="text-[10px] text-[#8E8E93]">Выручка</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[18px] font-bold text-[#1C1C1E]">{m.avgTime}</div>
+                      <div className="text-[10px] text-[#8E8E93]">Ср. мин</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[18px] font-bold text-[#FF9500]">{(m.revenue / m.orders / 1000).toFixed(1)}к</div>
+                      <div className="text-[10px] text-[#8E8E93]">Ср. чек</div>
+                    </div>
+                  </div>
+
+                  {/* Load bar */}
+                  <div>
+                    <div className="flex justify-between text-[11px] mb-1">
+                      <span className="text-[#8E8E93]">Загрузка</span>
+                      <span className="font-medium text-[#1C1C1E]">{m.load}%</span>
+                    </div>
+                    <div className="h-3 bg-[#F2F2F7] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{
+                        width: `${m.load}%`,
+                        backgroundColor: m.load > 80 ? '#FF3B30' : m.load > 60 ? '#FF9500' : '#34C759',
+                      }} />
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Yearly summary */}
+          {/* Mechanics comparison */}
+          <div className="bg-white rounded-[13px] shadow-sm p-4">
+            <h3 className="text-[14px] font-semibold text-[#1C1C1E] mb-3">Сравнение мастеров</h3>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-[12px] mb-1"><span className="text-[#8E8E93]">Выручка</span></div>
+                {mechanicsData.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2 mb-1">
+                    <span className="text-[11px] text-[#8E8E93] w-[100px] truncate">{m.name.split(' ')[0]}</span>
+                    <div className="flex-1 h-4 bg-[#F2F2F7] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-[#007AFF]" style={{ width: `${(m.revenue / mechanicsData[0].revenue) * 100}%` }} />
+                    </div>
+                    <span className="text-[11px] font-medium text-[#1C1C1E] w-[60px] text-right">{(m.revenue / 1000).toFixed(0)}к ₽</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="flex justify-between text-[12px] mb-1"><span className="text-[#8E8E93]">Количество заказов</span></div>
+                {mechanicsData.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2 mb-1">
+                    <span className="text-[11px] text-[#8E8E93] w-[100px] truncate">{m.name.split(' ')[0]}</span>
+                    <div className="flex-1 h-4 bg-[#F2F2F7] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-[#34C759]" style={{ width: `${(m.orders / mechanicsData[0].orders) * 100}%` }} />
+                    </div>
+                    <span className="text-[11px] font-medium text-[#1C1C1E] w-[60px] text-right">{m.orders}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="flex justify-between text-[12px] mb-1"><span className="text-[#8E8E93]">Средний чек</span></div>
+                {mechanicsData.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2 mb-1">
+                    <span className="text-[11px] text-[#8E8E93] w-[100px] truncate">{m.name.split(' ')[0]}</span>
+                    <div className="flex-1 h-4 bg-[#F2F2F7] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-[#FF9500]" style={{ width: `${(m.revenue / m.orders) / (mechanicsData[0].revenue / mechanicsData[0].orders) * 100}%` }} />
+                    </div>
+                    <span className="text-[11px] font-medium text-[#1C1C1E] w-[60px] text-right">{(m.revenue / m.orders / 1000).toFixed(1)}к ₽</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Services */}
+      {reportTab === 'services' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-[13px] shadow-sm p-5">
-            <h3 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">Итого за 2026 год</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-[#E5E5EA]">
-                <span className="text-[14px] text-[#8E8E93]">Общая выручка</span>
-                <span className="text-[18px] font-bold text-[#1C1C1E]">{yearlyRevenue.toLocaleString('ru-RU')} ₽</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[#E5E5EA]">
-                <span className="text-[14px] text-[#8E8E93]">Заказов выполнено</span>
-                <span className="text-[18px] font-bold text-[#1C1C1E]">{yearlyOrders}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[#E5E5EA]">
-                <span className="text-[14px] text-[#8E8E93]">Доля работы</span>
-                <span className="text-[18px] font-bold text-[#007AFF]">{yearlyLabor.toLocaleString('ru-RU')} ₽</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[#E5E5EA]">
-                <span className="text-[14px] text-[#8E8E93]">Доля запчастей</span>
-                <span className="text-[18px] font-bold text-[#5AC8FA]">{yearlyParts.toLocaleString('ru-RU')} ₽</span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-[14px] text-[#8E8E93]">Средний чек</span>
-                <span className="text-[18px] font-bold text-[#34C759]">{(yearlyRevenue / yearlyOrders).toLocaleString('ru-RU')} ₽</span>
-              </div>
+          {/* Top services */}
+          <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+            <div className="px-4 py-3 bg-[#F2F2F7]">
+              <h3 className="text-[13px] font-medium text-[#8E8E93]">ТОП УСЛУГ ПО ВЫРУЧКЕ</h3>
+            </div>
+            <div className="divide-y divide-[#E5E5EA]">
+              {topServices.map((s, i) => (
+                <div key={i} className="px-4 py-3 flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-full bg-[#007AFF] bg-opacity-10 flex items-center justify-center text-[12px] font-bold text-[#007AFF]">
+                    {i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[14px] font-medium text-[#1C1C1E]">{s.name}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] px-1.5 py-0.5 bg-[#F2F2F7] rounded text-[#8E8E93]">{s.category}</span>
+                      <span className="text-[11px] text-[#8E8E93]">{s.count} заказов • ср. {s.avgPrice.toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[14px] font-semibold text-[#1C1C1E]">{s.revenue.toLocaleString('ru-RU')} ₽</div>
+                    <div className="text-[11px] text-[#34C759] font-medium">{s.trend}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Profitability breakdown */}
-          <div className="bg-white rounded-[13px] shadow-sm p-5">
-            <h3 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">Структура выручки</h3>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-[13px] mb-1">
-                  <span className="text-[#8E8E93]">Работа</span>
-                  <span className="text-[#1C1C1E] font-medium">{((yearlyLabor / yearlyRevenue) * 100).toFixed(1)}%</span>
+          {/* Service volume chart */}
+          <div className="bg-white rounded-[13px] shadow-sm p-4">
+            <h3 className="text-[14px] font-semibold text-[#1C1C1E] mb-3">Количество заказов по услугам</h3>
+            <div className="space-y-2">
+              {topServices.slice(0, 7).map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-[11px] text-[#8E8E93] w-[110px] truncate">{s.name}</span>
+                  <div className="flex-1 h-5 bg-[#F2F2F7] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-[#007AFF]" style={{ width: `${(s.count / topServices[0].count) * 100}%` }} />
+                  </div>
+                  <span className="text-[11px] font-medium text-[#1C1C1E] w-[30px] text-right">{s.count}</span>
                 </div>
-                <div className="h-3 bg-[#F2F2F7] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#007AFF] rounded-full" style={{ width: `${(yearlyLabor / yearlyRevenue) * 100}%` }} />
-                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Yearly summary */}
+          <div className="bg-white rounded-[13px] shadow-sm p-4">
+            <h3 className="text-[14px] font-semibold text-[#1C1C1E] mb-3">Итого за 2026 год</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#F2F2F7] rounded-[10px] p-3 text-center">
+                <div className="text-[20px] font-bold text-[#1C1C1E]">{yearlyRevenue.toLocaleString('ru-RU')} ₽</div>
+                <div className="text-[10px] text-[#8E8E93]">Общая выручка</div>
               </div>
-              <div>
-                <div className="flex justify-between text-[13px] mb-1">
-                  <span className="text-[#8E8E93]">Запчасти</span>
-                  <span className="text-[#1C1C1E] font-medium">{((yearlyParts / yearlyRevenue) * 100).toFixed(1)}%</span>
-                </div>
-                <div className="h-3 bg-[#F2F2F7] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#5AC8FA] rounded-full" style={{ width: `${(yearlyParts / yearlyRevenue) * 100}%` }} />
-                </div>
+              <div className="bg-[#F2F2F7] rounded-[10px] p-3 text-center">
+                <div className="text-[20px] font-bold text-[#1C1C1E]">{yearlyOrders}</div>
+                <div className="text-[10px] text-[#8E8E93]">Заказов</div>
+              </div>
+              <div className="bg-[#F2F2F7] rounded-[10px] p-3 text-center">
+                <div className="text-[20px] font-bold text-[#007AFF]">{yearlyLabor.toLocaleString('ru-RU')} ₽</div>
+                <div className="text-[10px] text-[#8E8E93]">Работа</div>
+              </div>
+              <div className="bg-[#F2F2F7] rounded-[10px] p-3 text-center">
+                <div className="text-[20px] font-bold text-[#5AC8FA]">{yearlyParts.toLocaleString('ru-RU')} ₽</div>
+                <div className="text-[10px] text-[#8E8E93]">Запчасти</div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
