@@ -83,11 +83,5 @@ export function getCurrentTenantId(): string | null {
 }
 
 function getDefaultAdminUsers(): AdminUser[] {
-  return [
-    { id: 'admin_1', tenantId: 't_default', name: 'Иванов Пётр', phone: '+79161234567', role: 'admin', isActive: true },
-    { id: 'admin_2', tenantId: 't_south', name: 'Сидоров Алексей', phone: '+79162345678', role: 'admin', isActive: true },
-    { id: 'admin_3', tenantId: 't_north', name: 'Козлов Дмитрий', phone: '+79163456789', role: 'admin', isActive: true },
-    { id: 'mech_1', tenantId: 't_default', name: 'Сидоров А.', phone: '+79164567890', role: 'mechanic', isActive: true },
-    { id: 'mech_2', tenantId: 't_default', name: 'Иванов П.', phone: '+79165678901', role: 'mechanic', isActive: true },
-  ]
+  return []
 }

@@ -7,15 +7,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: BASE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
   ]
 
-  // Tenant pages
-  const tenantSlugs = ['avtomaster-pro', 'autoservice-yug', 'autoservice-sever']
-  const tenantPages: MetadataRoute.Sitemap = tenantSlugs.map(slug => ({
-    url: `${BASE_URL}/${slug}`,
-    lastModified: new Date(),
-    changeFrequency: 'daily' as const,
-    priority: 0.9,
-  }))
-
   // Service pages
   const serviceSlugs = [
     'zamena-masla', 'zamena-kolodok', 'zamena-grm',
@@ -28,5 +19,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
-  return [...staticPages, ...tenantPages, ...servicePages]
+  // Privacy page
+  const legalPages: MetadataRoute.Sitemap = [
+    { url: `${BASE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+  ]
+
+  return [...staticPages, ...servicePages, ...legalPages]
 }

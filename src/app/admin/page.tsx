@@ -246,17 +246,13 @@ function DashboardSection() {
   const lowStock = getLowStockItems()
 
   const stats = [
-    { label: 'Выручка за месяц', value: '247 500 ₽', icon: '💰', change: '+12%', color: '#34C759', glow: 'rgba(52, 199, 89, 0.15)' },
-    { label: 'Заказов выполнено', value: '43', icon: '✅', change: '+8%', color: '#007AFF', glow: 'rgba(0, 122, 255, 0.15)' },
-    { label: 'Клиентов', value: '38', icon: '👥', change: '+5%', color: '#5856D6', glow: 'rgba(88, 86, 214, 0.15)' },
-    { label: 'Средний чек', value: '5 756 ₽', icon: '📊', change: '+3%', color: '#FF9500', glow: 'rgba(255, 149, 0, 0.15)' },
+    { label: 'Выручка за месяц', value: '0 ₽', icon: '💰', change: '—', color: '#34C759', glow: 'rgba(52, 199, 89, 0.15)' },
+    { label: 'Заказов выполнено', value: '0', icon: '✅', change: '—', color: '#007AFF', glow: 'rgba(0, 122, 255, 0.15)' },
+    { label: 'Клиентов', value: '0', icon: '👥', change: '—', color: '#5856D6', glow: 'rgba(88, 86, 214, 0.15)' },
+    { label: 'Средний чек', value: '0 ₽', icon: '📊', change: '—', color: '#FF9500', glow: 'rgba(255, 149, 0, 0.15)' },
   ]
 
-  const todayBookings = [
-    { time: '09:00', name: 'Козлов Д.', service: 'Замена масла', status: 'confirmed' },
-    { time: '11:00', name: 'Петрова М.', service: 'Колодки передние', status: 'pending' },
-    { time: '14:00', name: 'Смирнов О.', service: 'Диагностика', status: 'confirmed' },
-  ]
+  const todayBookings: { time: string; name: string; service: string; status: string }[] = []
 
   return (
     <div className="space-y-6">

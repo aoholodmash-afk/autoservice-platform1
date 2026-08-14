@@ -14,11 +14,7 @@ interface WarrantyItem {
   mechanicName: string
 }
 
-const MOCK_WARRANTIES: WarrantyItem[] = [
-  { id: 'w1', orderId: 'WO-1234', serviceName: 'Замена масла и фильтров', carModel: 'Lada Vesta 2020', date: '2026-08-10', warrantyMonths: 6, expiresAt: '2027-02-10', mechanicName: 'Алексей С.' },
-  { id: 'w2', orderId: 'WO-1230', serviceName: 'Замена тормозных колодок', carModel: 'Lada Vesta 2020', date: '2026-07-15', warrantyMonths: 12, expiresAt: '2027-07-15', mechanicName: 'Пётр И.' },
-  { id: 'w3', orderId: 'WO-1225', serviceName: 'Замена ремня ГРМ', carModel: 'Lada Vesta 2020', date: '2026-06-20', warrantyMonths: 24, expiresAt: '2028-06-20', mechanicName: 'Алексей С.' },
-]
+const MOCK_WARRANTIES: WarrantyItem[] = []
 
 interface WarrantyScreenProps {
   onBack: () => void

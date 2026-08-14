@@ -17,13 +17,7 @@ interface ChatScreenProps {
   onBack: () => void
 }
 
-const MOCK_MESSAGES: ChatMessage[] = [
-  { id: 'm1', from: 'master', text: 'Здравствуйте! Ваш автомобиль принят в работу.', time: '09:15', read: true },
-  { id: 'm2', from: 'client', text: 'Спасибо! Когда будет готово?', time: '09:20', read: true },
-  { id: 'm3', from: 'master', text: 'Примерно к 14:00. Замена масла и фильтров — это быстро.', time: '09:22', read: true },
-  { id: 'm4', from: 'master', text: 'Заодно проверили тормозные колодки — передние ещё походят, задние на 60% изношены. Рекомендуем замену при следующем ТО.', time: '11:30', read: true },
-  { id: 'm5', from: 'client', text: 'Хорошо, спасибо за информацию! На следующий раз поменяем.', time: '11:35', read: true },
-]
+const MOCK_MESSAGES: ChatMessage[] = []
 
 export function ChatScreen({ orderId, onBack }: ChatScreenProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(MOCK_MESSAGES)

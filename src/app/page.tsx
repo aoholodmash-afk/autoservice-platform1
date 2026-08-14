@@ -33,13 +33,6 @@ export default function HomePage() {
       <div className="sr-only">
         <h1>AutoService — Запись на ТО и ремонт автомобилей</h1>
         <p>Онлайн-запись на техническое обслуживание и ремонт. ВАЗ, Lada, Toyota, Hyundai, Kia и другие марки.</p>
-        <nav>
-          <ul>
-            <li><a href="/avtomaster-pro">Автомастер Про — Москва</a></li>
-            <li><a href="/autoservice-yug">АвтоСервис Юг — Москва</a></li>
-            <li><a href="/autoservice-sever">АвтоСервис Север — Санкт-Петербург</a></li>
-          </ul>
-        </nav>
       </div>
 
       {/* Hero */}

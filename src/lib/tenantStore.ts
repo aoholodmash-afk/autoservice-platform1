@@ -72,54 +72,5 @@ export function deleteTenant(id: string): void {
 }
 
 export function getDefaultTenants(): Tenant[] {
-  return [
-    {
-      id: 't_default',
-      slug: 'avtomaster-pro',
-      name: 'Автомастер Про',
-      address: 'ул. Пушкина, д. 10',
-      phone: '+7 (999) 123-45-67',
-      email: 'info@avtomaster.pro',
-      description: 'Профессиональный ремонт и обслуживание автомобилей',
-      workHours: '09:00–20:00',
-      boxes: 4,
-      serviceCategories: ['to', 'repair', 'diagnostic', 'tires'],
-      tariff: 'pro',
-      isActive: true,
-      createdAt: '2026-01-15T10:00:00',
-      city: 'Москва',
-    },
-    {
-      id: 't_south',
-      slug: 'autoservice-yug',
-      name: 'АвтоСервис Юг',
-      address: 'пр. Победы, д. 45',
-      phone: '+7 (999) 234-56-78',
-      email: 'info@auto-yug.ru',
-      description: 'Быстрый и качественный ремонт',
-      workHours: '08:00–19:00',
-      boxes: 3,
-      serviceCategories: ['to', 'repair', 'tires'],
-      tariff: 'business',
-      isActive: true,
-      createdAt: '2026-03-20T10:00:00',
-      city: 'Москва',
-    },
-    {
-      id: 't_north',
-      slug: 'autoservice-sever',
-      name: 'АвтоСервис Север',
-      address: 'ул. Ленина, д. 78',
-      phone: '+7 (999) 345-67-89',
-      email: 'info@auto-sever.ru',
-      description: 'Специалисты по ВАЗ и Lada',
-      workHours: '09:00–21:00',
-      boxes: 5,
-      serviceCategories: ['to', 'repair', 'diagnostic'],
-      tariff: 'start',
-      isActive: true,
-      createdAt: '2026-05-10T10:00:00',
-      city: 'Санкт-Петербург',
-    },
-  ]
+  return []
 }
