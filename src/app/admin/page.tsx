@@ -46,6 +46,15 @@ export default function AdminPage() {
     { id: 'reports' as AdminSection, icon: '📈', label: 'Отчёты' },
   ]
 
+  // Mobile bottom tabs (most used sections)
+  const mobileTabs = [
+    { id: 'dashboard' as AdminSection, icon: '📊', label: 'Главная' },
+    { id: 'new-order' as AdminSection, icon: '➕', label: 'Заказ' },
+    { id: 'schedule' as AdminSection, icon: '🗓', label: 'Расписание' },
+    { id: 'clients' as AdminSection, icon: '👥', label: 'Клиенты' },
+    { id: 'stock' as AdminSection, icon: '📦', label: 'Склад' },
+  ]
+
   return (
     <div className="min-h-screen bg-[#F2F2F7] flex">
       {/* Sidebar overlay for mobile */}
@@ -72,7 +81,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <nav className="p-3 space-y-1">
+        <nav className="p-3 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
           {navItems.map(item => (
             <button
               key={item.id}
@@ -107,21 +116,21 @@ export default function AdminPage() {
         {/* Top bar */}
         <header className="bg-white border-b border-[#C6C6C8] sticky top-0 z-30">
           <div className="flex items-center justify-between px-4 h-[52px]">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 flex-shrink-0"
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </button>
-              <h2 className="text-[17px] font-semibold text-[#1C1C1E]">
+              <h2 className="text-[16px] sm:text-[17px] font-semibold text-[#1C1C1E] truncate">
                 {navItems.find(n => n.id === section)?.label}
               </h2>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-[13px] text-[#8E8E93]">Администратор</span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-[12px] sm:text-[13px] text-[#8E8E93] hidden sm:block">Администратор</span>
               <div className="w-8 h-8 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-[13px] font-semibold">
                 А
               </div>
@@ -130,7 +139,7 @@ export default function AdminPage() {
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6">
+        <main className="p-3 sm:p-4 lg:p-6 pb-24 lg:pb-6">
           {section === 'dashboard' && <DashboardSection />}
           {section === 'new-order' && <NewOrderSection stockItems={stockItems} onStockMovement={addStockMovement} />}
           {section === 'services' && <ServicesSection />}
@@ -142,6 +151,22 @@ export default function AdminPage() {
           {section === 'reports' && <ReportsSection stockItems={stockItems} />}
         </main>
       </div>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E5EA] z-40 flex items-center justify-around h-[60px] pb-[env(safe-area-inset-bottom)]">
+        {mobileTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setSection(tab.id)}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 min-w-[48px] ${
+              section === tab.id ? 'text-[#007AFF]' : 'text-[#8E8E93]'
+            }`}
+          >
+            <span className="text-[20px]">{tab.icon}</span>
+            <span className="text-[10px] font-medium">{tab.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }
@@ -902,11 +927,11 @@ function ServicesSection() {
       {/* Services table */}
       <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[700px]">
             <thead>
               <tr className="bg-[#F2F2F7]">
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-[#8E8E93]">Услуга</th>
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-[#8E8E93]">Категория</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-[13px] font-medium text-[#8E8E93]">Услуга</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-[13px] font-medium text-[#8E8E93]">Категория</th>
                 <th className="px-4 py-3 text-right text-[13px] font-medium text-[#8E8E93]">Работа ₽</th>
                 <th className="px-4 py-3 text-right text-[13px] font-medium text-[#8E8E93]">Запчасти от ₽</th>
                 <th className="px-4 py-3 text-right text-[13px] font-medium text-[#8E8E93]">Итого от ₽</th>
@@ -1282,9 +1307,8 @@ function ScheduleSection() {
         />
       )}
 
-      {/* Timeline grid */}
-      <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
-        {/* Mechanic headers */}
+      {/* Timeline — desktop grid */}
+      <div className="hidden lg:block bg-white rounded-[13px] shadow-sm overflow-hidden">
         <div className="grid border-b border-[#E5E5EA]" style={{ gridTemplateColumns: `60px repeat(${MECHANICS.length}, 1fr)` }}>
           <div className="px-2 py-3 bg-[#F2F2F7] text-[11px] text-[#8E8E93] font-medium">Время</div>
           {MECHANICS.map(m => (
@@ -1294,42 +1318,27 @@ function ScheduleSection() {
             </div>
           ))}
         </div>
-
-        {/* Time rows */}
         <div className="max-h-[500px] overflow-y-auto">
           {TIME_SLOTS.map(time => (
             <div key={time} className="grid border-b border-[#E5E5EA] last:border-b-0" style={{ gridTemplateColumns: `60px repeat(${MECHANICS.length}, 1fr)` }}>
-              <div className="px-2 py-2 text-[12px] text-[#8E8E93] font-mono bg-[#F2F2F7] flex items-start">
-                {time}
-              </div>
+              <div className="px-2 py-2 text-[12px] text-[#8E8E93] font-mono bg-[#F2F2F7] flex items-start">{time}</div>
               {MECHANICS.map(mechanic => {
                 const slot = isSlotBusy(selectedDay, mechanic.id, time)
                 if (slot && slot.time === time) {
                   const colors = statusColors[slot.status]
                   const slotSpan = Math.ceil(slot.duration / 30)
                   return (
-                    <div
-                      key={mechanic.id}
-                      className={`px-2 py-1.5 ${colors.bg} border-l border-[#E5E5EA] cursor-pointer hover:brightness-95 transition-all`}
-                      style={{ gridRow: `span ${slotSpan}`, minHeight: `${slotSpan * 40}px` }}
-                      onClick={() => setSelectedSlot(slot)}
-                    >
-                      <div className={`text-[12px] font-semibold ${colors.text}`}>
-                        {slot.clientName?.split(' ')[0]}
-                      </div>
+                    <div key={mechanic.id} className={`px-2 py-1.5 ${colors.bg} border-l border-[#E5E5EA] cursor-pointer hover:brightness-95 transition-all`} style={{ gridRow: `span ${slotSpan}`, minHeight: `${slotSpan * 40}px` }} onClick={() => setSelectedSlot(slot)}>
+                      <div className={`text-[12px] font-semibold ${colors.text}`}>{slot.clientName?.split(' ')[0]}</div>
                       <div className="text-[10px] text-[#8E8E93] truncate">{slot.service}</div>
                       <div className="text-[10px] text-[#8E8E93]">{slot.car?.split(' ').slice(0, 2).join(' ')}</div>
                       <div className={`text-[9px] font-medium ${colors.text} mt-0.5`}>{colors.label}</div>
                     </div>
                   )
                 }
-                if (slot) return null // Skip if covered by a previous multi-slot
+                if (slot) return null
                 return (
-                  <div
-                    key={mechanic.id}
-                    className="px-2 py-2 border-l border-[#E5E5EA] hover:bg-[#F2F2F7] cursor-pointer transition-colors"
-                    onClick={() => setShowBookingForm(true)}
-                  >
+                  <div key={mechanic.id} className="px-2 py-2 border-l border-[#E5E5EA] hover:bg-[#F2F2F7] cursor-pointer transition-colors" onClick={() => setShowBookingForm(true)}>
                     <div className="text-[10px] text-[#8E8E93] opacity-50">—</div>
                   </div>
                 )
@@ -1337,6 +1346,37 @@ function ScheduleSection() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Timeline — mobile cards */}
+      <div className="lg:hidden space-y-2">
+        {getDaySlots(selectedDay).length === 0 ? (
+          <div className="bg-white rounded-[13px] shadow-sm p-6 text-center">
+            <div className="text-[34px] mb-2">📭</div>
+            <p className="text-[14px] text-[#8E8E93]">Нет записей на этот день</p>
+            <button onClick={() => setShowBookingForm(true)} className="mt-3 h-[40px] px-6 bg-[#34C759] text-white rounded-[10px] text-[14px] font-semibold">+ Записать</button>
+          </div>
+        ) : (
+          getDaySlots(selectedDay)
+            .sort((a, b) => a.time.localeCompare(b.time))
+            .map(slot => {
+              const colors = statusColors[slot.status]
+              return (
+                <div key={slot.id} className={`bg-white rounded-[13px] shadow-sm p-4 border-l-4 cursor-pointer`} style={{ borderLeftColor: slot.status === 'completed' ? '#34C759' : slot.status === 'in_progress' ? '#FF9500' : '#007AFF' }} onClick={() => setSelectedSlot(slot)}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[15px] font-bold text-[#1C1C1E]">{slot.time}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${colors.bg} ${colors.text}`}>{colors.label}</span>
+                  </div>
+                  <div className="text-[14px] font-medium text-[#1C1C1E] mb-1">{slot.clientName}</div>
+                  <div className="text-[13px] text-[#8E8E93] mb-1">{slot.service}</div>
+                  <div className="flex items-center justify-between text-[12px] text-[#8E8E93]">
+                    <span>{slot.car}</span>
+                    <span>🔧 {slot.mechanicName.split(' ')[0]} • {slot.duration} мин</span>
+                  </div>
+                </div>
+              )
+            })
+        )}
       </div>
 
       {/* Mechanic status cards */}
@@ -2006,7 +2046,7 @@ function StockSection({ stockItems, setStockItems, movements, onAddMovement }: {
           {/* Stock table */}
           <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="bg-[#F2F2F7]">
                     <th className="px-3 py-2 text-left text-[11px] font-medium text-[#8E8E93]">Название</th>
