@@ -106,7 +106,17 @@ export default function HomePage() {
           ))}
         </div>
 
-        {filtered.length === 0 && (
+        {filtered.length === 0 && tenants.length === 0 && (
+          <div className="text-center py-16">
+            <div className="text-[55px] mb-4">🚗</div>
+            <h2 className="text-[20px] font-bold text-[var(--ink)] mb-2">Скоро здесь появятся автосервисы</h2>
+            <p className="text-[14px] text-[var(--ink-secondary)] max-w-[280px] mx-auto">
+              Мы работаем над добавлением лучших автосервисов в вашем городе
+            </p>
+          </div>
+        )}
+
+        {filtered.length === 0 && tenants.length > 0 && (
           <div className="text-center py-12">
             <div className="text-[44px] mb-3">🔍</div>
             <p className="text-[15px] text-[var(--ink-secondary)]">Ничего не найдено</p>

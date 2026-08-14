@@ -2,26 +2,32 @@
 
 import { useState, useEffect } from 'react'
 import { getTenants, Tenant } from '@/lib/tenantStore'
-import { getAdminUsers, AdminUser, loginSuperAdmin, logoutAdmin, getAuthState } from '@/lib/adminAuth'
+import { getAdminUsers, AdminUser } from '@/lib/adminAuth'
+import { getSession, clearSession } from '@/lib/auth'
 import { haptic } from '@/lib/constants'
 
-type SuperSection = 'dashboard' | 'tenants' | 'users'
+type SuperSection = 'dashboard' | 'tenants' | 'users' | 'invites'
 
 export default function SuperAdminPage() {
-  const [auth, setAuth] = useState(getAuthState())
+  const [isAuth, setIsAuth] = useState(false)
   const [section, setSection] = useState<SuperSection>('dashboard')
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [users, setUsers] = useState<AdminUser[]>([])
 
   useEffect(() => {
-    if (auth.isAuthenticated) {
+    const session = getSession()
+    setIsAuth(session !== null && session.role === 'super_admin')
+  }, [])
+
+  useEffect(() => {
+    if (isAuth) {
       setTenants(getTenants())
       setUsers(getAdminUsers())
     }
-  }, [auth.isAuthenticated])
+  }, [isAuth])
 
-  if (!auth.isAuthenticated) {
-    return <SuperLoginPage onLogin={() => setAuth(getAuthState())} />
+  if (!isAuth) {
+    return <SuperLoginPage onLogin={() => setIsAuth(true)} />
   }
 
   return (
@@ -38,6 +44,7 @@ export default function SuperAdminPage() {
             { id: 'dashboard' as SuperSection, icon: '📊', label: 'Дашборд' },
             { id: 'tenants' as SuperSection, icon: '🏪', label: 'Филиалы' },
             { id: 'users' as SuperSection, icon: '👤', label: 'Пользователи' },
+            { id: 'invites' as SuperSection, icon: '🎟', label: 'Приглашения' },
           ].map(item => (
             <button key={item.id} onClick={() => { haptic('light'); setSection(item.id) }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all ${
@@ -53,7 +60,7 @@ export default function SuperAdminPage() {
           ))}
         </nav>
 
-        <button onClick={() => { logoutAdmin(); setAuth(getAuthState()) }}
+        <button onClick={() => { clearSession(); setIsAuth(false) }}
           className="text-white/40 text-[13px] hover:text-white transition-colors">
           ← Выйти
         </button>
@@ -64,6 +71,7 @@ export default function SuperAdminPage() {
         {section === 'dashboard' && <DashboardSection tenants={tenants} users={users} />}
         {section === 'tenants' && <TenantsSection tenants={tenants} onRefresh={() => setTenants(getTenants())} />}
         {section === 'users' && <UsersSection users={users} tenants={tenants} />}
+        {section === 'invites' && <InvitesSection tenants={tenants} />}
       </main>
     </div>
   )
@@ -71,12 +79,63 @@ export default function SuperAdminPage() {
 
 // ===== LOGIN =====
 function SuperLoginPage({ onLogin }: { onLogin: () => void }) {
-  const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
-  const [codeSent, setCodeSent] = useState(false)
+  const [step, setStep] = useState<'login' | 'password' | '2fa'>('login')
+  const [login, setLogin] = useState('')
+  const [password, setPassword] = useState('')
+  const [code2FA, setCode2FA] = useState('')
+  const [generatedCode, setGeneratedCode] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleLogin = () => {
-    loginSuperAdmin(phone, code)
+  const SUPER_ADMIN_KEY = 'autoservice_super_admin'
+
+  const handleLoginStep = () => {
+    setError('')
+    if (!login) return
+    // Check if admin exists
+    const stored = localStorage.getItem(SUPER_ADMIN_KEY)
+    if (!stored) {
+      setError('Super Admin не зарегистрирован. Перейдите на /super/register')
+      return
+    }
+    const admin = JSON.parse(stored)
+    if (admin.login !== login) {
+      setError('Неверный логин')
+      return
+    }
+    setStep('password')
+  }
+
+  const handlePasswordStep = async () => {
+    setError('')
+    setLoading(true)
+    const stored = localStorage.getItem(SUPER_ADMIN_KEY)
+    if (!stored) { setError('Ошибка'); setLoading(false); return }
+    const admin = JSON.parse(stored)
+    const { verifyPassword } = await import('@/lib/auth')
+    const valid = await verifyPassword(password, admin.passwordHash)
+    if (!valid) {
+      setError('Неверный пароль')
+      setLoading(false)
+      return
+    }
+    // Generate 2FA code
+    const { generateCode } = await import('@/lib/auth')
+    const code = generateCode()
+    setGeneratedCode(code)
+    setStep('2fa')
+    setLoading(false)
+  }
+
+  const handle2FAStep = () => {
+    setError('')
+    if (code2FA !== generatedCode) {
+      setError('Неверный код')
+      return
+    }
+    // Save session
+    const { saveSession } = require('@/lib/auth')
+    saveSession({ userId: 'super_admin', role: 'super_admin' })
     onLogin()
   }
 
@@ -89,31 +148,63 @@ function SuperLoginPage({ onLogin }: { onLogin: () => void }) {
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-[16px] flex items-center justify-center mx-auto mb-4 text-3xl" style={{ background: 'linear-gradient(135deg, #5856D6, #FF3B30)' }}>🏢</div>
           <h1 className="text-[24px] font-bold text-white">Super Admin</h1>
-          <p className="text-[14px] text-white/50">Управление платформой</p>
+          <p className="text-[14px] text-white/50">
+            {step === 'login' ? 'Введите логин' : step === 'password' ? 'Введите пароль' : 'Код подтверждения'}
+          </p>
         </div>
-        <div className="space-y-4">
-          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Телефон"
-            className="w-full h-[44px] px-4 bg-white/10 rounded-[13px] text-white placeholder-white/40 outline-none border border-white/10 focus:border-[#5856D6]" />
-          {phone && !codeSent && (
-            <button onClick={() => setCodeSent(true)}
-              className="w-full h-[48px] text-white rounded-[13px] font-semibold"
+
+        {/* Step 1: Login */}
+        {step === 'login' && (
+          <div className="space-y-4">
+            <input value={login} onChange={e => setLogin(e.target.value)} placeholder="Логин" onKeyDown={e => e.key === 'Enter' && handleLoginStep()}
+              className="w-full h-[44px] px-4 bg-white/10 rounded-[13px] text-white placeholder-white/40 outline-none border border-white/10 focus:border-[#5856D6]" />
+            {error && <p className="text-[13px] text-[#FF453A] text-center">{error}</p>}
+            <button onClick={handleLoginStep} className="w-full h-[48px] text-white rounded-[13px] font-semibold"
               style={{ background: 'linear-gradient(135deg, #5856D6, #007AFF)' }}>
-              Получить код
+              Далее
             </button>
-          )}
-          {codeSent && (
-            <>
-              <input value={code} onChange={e => setCode(e.target.value)} placeholder="Код" maxLength={4}
-                className="w-full h-[44px] px-4 bg-white/10 rounded-[13px] text-white text-center text-[20px] tracking-[0.5em] outline-none border border-white/10 focus:border-[#5856D6]" />
-              <button onClick={handleLogin} disabled={code.length !== 4}
-                className="w-full h-[48px] text-white rounded-[13px] font-semibold disabled:opacity-40"
-                style={{ background: 'linear-gradient(135deg, #5856D6, #007AFF)' }}>
-                Войти
-              </button>
-              <p className="text-[12px] text-white/30 text-center">Демо: любой 4-значный код</p>
-            </>
-          )}
-        </div>
+            <a href="/super/register" className="block text-center text-[13px] text-white/40 hover:text-white/70">
+              Зарегистрироваться →
+            </a>
+          </div>
+        )}
+
+        {/* Step 2: Password */}
+        {step === 'password' && (
+          <div className="space-y-4">
+            <p className="text-[13px] text-white/50 text-center">Логин: <span className="text-white font-medium">{login}</span></p>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Пароль" onKeyDown={e => e.key === 'Enter' && handlePasswordStep()}
+              className="w-full h-[44px] px-4 bg-white/10 rounded-[13px] text-white placeholder-white/40 outline-none border border-white/10 focus:border-[#5856D6]" />
+            {error && <p className="text-[13px] text-[#FF453A] text-center">{error}</p>}
+            <button onClick={handlePasswordStep} disabled={loading}
+              className="w-full h-[48px] text-white rounded-[13px] font-semibold disabled:opacity-40"
+              style={{ background: 'linear-gradient(135deg, #5856D6, #007AFF)' }}>
+              {loading ? 'Проверка...' : 'Далее'}
+            </button>
+            <button onClick={() => { setStep('login'); setError('') }} className="w-full text-[13px] text-white/40 hover:text-white/70">
+              ← Назад
+            </button>
+          </div>
+        )}
+
+        {/* Step 3: 2FA Email Code */}
+        {step === '2fa' && (
+          <div className="space-y-4">
+            <div className="bg-white/5 rounded-[13px] p-4 text-center border border-white/10">
+              <p className="text-[12px] text-white/50 mb-2">Код отправлен на email</p>
+              <p className="text-[28px] font-bold text-white tracking-[0.3em] font-mono">{generatedCode}</p>
+              <p className="text-[11px] text-white/30 mt-2">Для демо: код показан на экране</p>
+            </div>
+            <input value={code2FA} onChange={e => setCode2FA(e.target.value)} placeholder="Введите 6-значный код" maxLength={6}
+              className="w-full h-[44px] px-4 bg-white/10 rounded-[13px] text-white text-center text-[20px] tracking-[0.5em] outline-none border border-white/10 focus:border-[#5856D6]" />
+            {error && <p className="text-[13px] text-[#FF453A] text-center">{error}</p>}
+            <button onClick={handle2FAStep} disabled={code2FA.length !== 6}
+              className="w-full h-[48px] text-white rounded-[13px] font-semibold disabled:opacity-40"
+              style={{ background: 'linear-gradient(135deg, #5856D6, #007AFF)' }}>
+              Подтвердить
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -422,6 +513,104 @@ function UsersSection({ users, tenants }: { users: AdminUser[]; tenants: Tenant[
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ===== INVITES =====
+function InvitesSection({ tenants }: { tenants: Tenant[] }) {
+  const [invites, setInvites] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('autoservice_invites') || '[]') } catch { return [] }
+  })
+  const [showCreate, setShowCreate] = useState(false)
+  const [selectedTenant, setSelectedTenant] = useState('')
+  const [copiedToken, setCopiedToken] = useState('')
+
+  const handleCreate = () => {
+    const { createInvite } = require('@/lib/inviteStore')
+    const tenant = tenants.find(t => t.id === selectedTenant)
+    const invite = createInvite('admin', selectedTenant || undefined, tenant?.slug)
+    setInvites((prev: any[]) => [...prev, invite])
+    setShowCreate(false)
+    setSelectedTenant('')
+  }
+
+  const handleCopy = (token: string) => {
+    const inv = invites.find((i: any) => i.token === token)
+    const url = `${window.location.origin}/${inv?.tenantSlug || 'slug'}/admin/invite?token=${token}`
+    navigator.clipboard.writeText(url)
+    setCopiedToken(token)
+    setTimeout(() => setCopiedToken(''), 2000)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-[28px] font-bold text-white">Приглашения</h2>
+        <button onClick={() => setShowCreate(true)}
+          className="h-[36px] px-4 text-white rounded-[10px] text-[13px] font-semibold"
+          style={{ background: 'linear-gradient(135deg, #34C759, #30D158)' }}>
+          + Создать приглашение
+        </button>
+      </div>
+
+      {showCreate && (
+        <div className="bg-white/10 backdrop-blur rounded-[16px] p-5 border border-white/20 spring-in">
+          <h3 className="text-[16px] font-semibold text-white mb-4">Новое приглашение</h3>
+          <div className="space-y-3 mb-4">
+            <div>
+              <label className="text-[12px] text-white/50 mb-1 block">Филиал</label>
+              <select value={selectedTenant} onChange={e => setSelectedTenant(e.target.value)}
+                className="w-full h-[40px] px-3 bg-white/5 rounded-[10px] text-white text-[14px] outline-none border border-white/10">
+                <option value="">Без привязки к филиалу</option>
+                {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.slug})</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleCreate} className="h-[36px] px-5 bg-[#34C759] text-white rounded-[10px] text-[13px] font-semibold">
+              Создать
+            </button>
+            <button onClick={() => setShowCreate(false)} className="h-[36px] px-4 bg-white/10 text-white/60 rounded-[10px] text-[13px]">
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white/10 backdrop-blur rounded-[16px] border border-white/10 overflow-hidden">
+        {invites.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-[15px] text-white/40">Нет приглашений</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {invites.map((inv: any) => (
+              <div key={inv.id} className="px-5 py-3 flex items-center gap-4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[14px] font-bold ${
+                  inv.isUsed ? 'bg-[#34C759]/20 text-[#4ade80]' : 'bg-[#007AFF]/20 text-[#60a5fa]'
+                }`}>
+                  {inv.isUsed ? '✓' : '🎟'}
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] text-white font-medium font-mono">{inv.token}</p>
+                  <p className="text-[11px] text-white/40">
+                    {inv.tenantSlug ? `/${inv.tenantSlug}` : 'Без филиала'} • {inv.isUsed ? `Использован: ${inv.usedByName}` : 'Активно'}
+                  </p>
+                </div>
+                {!inv.isUsed && (
+                  <button onClick={() => handleCopy(inv.token)}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-medium ${
+                      copiedToken === inv.token ? 'bg-[#34C759] text-white' : 'bg-white/10 text-white/60'
+                    }`}>
+                    {copiedToken === inv.token ? '✓ Скопировано' : 'Копировать ссылку'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

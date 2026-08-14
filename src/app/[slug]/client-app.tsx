@@ -26,6 +26,7 @@ import { LocationSelect } from '@/components/screens/LocationSelect'
 import { PaymentScreen } from '@/components/screens/PaymentScreen'
 
 import { TabBar, HomeIcon, CarIcon, CalendarIcon, ProfileIcon } from '@/components/ui/TabBar'
+import { ClientLoginForm } from '@/components/auth/ClientLoginForm'
 
 type Screen =
   | 'welcome' | 'wizard' | 'my-cars' | 'main-menu' | 'repair' | 'tracking'
@@ -41,6 +42,8 @@ export default function TenantClientApp({ tenant }: { tenant: Tenant }) {
   const [wizardReturnTo, setWizardReturnTo] = useState<Screen>('my-cars')
   const [repairCategory, setRepairCategory] = useState<string | null>(null)
   const [paymentData, setPaymentData] = useState({ amount: 500, serviceName: 'Предоплата' })
+  const [clientPhone, setClientPhone] = useState<string | null>(null)
+  const [showLoginForm, setShowLoginForm] = useState(false)
   const hasInitialized = useRef(false)
 
   useEffect(() => {
@@ -176,6 +179,14 @@ export default function TenantClientApp({ tenant }: { tenant: Tenant }) {
       </div>
 
       {showTabBar && <TabBar activeTab={activeTab} onTabChange={handleTabChange} tabs={tabs} />}
+
+      {/* Client login overlay */}
+      {showLoginForm && (
+        <ClientLoginForm
+          onSuccess={(phone) => { setClientPhone(phone); setShowLoginForm(false) }}
+          onSkip={() => setShowLoginForm(false)}
+        />
+      )}
     </div>
   )
 }
