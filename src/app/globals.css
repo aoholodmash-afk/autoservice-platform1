@@ -410,6 +410,13 @@
     background: var(--gradient-accent);
     opacity: 0.3;
   }
+
+  /* Skeleton loading animation */
+  .skeleton-animate {
+    background: linear-gradient(90deg, var(--fill) 25%, var(--skeleton) 50%, var(--fill) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
 }
 
 @layer utilities {

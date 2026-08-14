@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { CookieBannerWrapper } from '@/components/ui/CookieBannerWrapper'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
 const SITE_NAME = 'AutoService'
 const SITE_DESCRIPTION = 'Запись на техническое обслуживание и ремонт автомобиля. ВАЗ, Lada, Toyota, Hyundai, Kia и другие марки. Онлайн-запись, прозрачные цены, отзывы клиентов.'
@@ -100,7 +101,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta httpEquiv="x-ua-compatible" content="IE=edge" />
       </head>
       <body className="antialiased overscroll-y-contain">
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
         <CookieBannerWrapper />
       </body>
     </html>
