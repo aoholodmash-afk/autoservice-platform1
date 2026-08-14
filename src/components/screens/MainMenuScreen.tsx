@@ -9,25 +9,20 @@ interface MainMenuScreenProps {
   car: SavedCar
   onSelectCategory: (categoryId: string) => void
   onOpenRepair: () => void
-  onOpenTracking: () => void
 }
 
 const MENU_ITEMS = [
-  { id: 'to', icon: '🛢', nameKey: 'menu.to', descKey: 'menu.to.desc', color: '#007AFF' },
-  { id: 'repair', icon: '🔧', nameKey: 'menu.repair', descKey: 'menu.repair.desc', color: '#FF9500' },
-  { id: 'diagnostic', icon: '🔍', nameKey: 'menu.diagnostic', descKey: 'menu.diagnostic.desc', color: '#5856D6' },
-  { id: 'tires', icon: '🛞', nameKey: 'menu.tires', descKey: 'menu.tires.desc', color: '#34C759' },
-  { id: 'repair-full', icon: '🔩', nameKey: 'Ремонт', descKey: 'Запчасти, цены, запись на работы', color: '#FF3B30' },
-  { id: 'tracking', icon: '📍', nameKey: 'Трекинг', descKey: 'Статус вашего ремонта', color: '#5856D6' },
+  { id: 'to', icon: '🛢', nameKey: 'menu.to', descKey: 'menu.to.desc' },
+  { id: 'repair', icon: '🔧', nameKey: 'Ремонт', descKey: 'Запчасти, цены, запись' },
+  { id: 'diagnostic', icon: '🔍', nameKey: 'menu.diagnostic', descKey: 'menu.diagnostic.desc' },
+  { id: 'tires', icon: '🛞', nameKey: 'menu.tires', descKey: 'menu.tires.desc' },
 ]
 
-export function MainMenuScreen({ car, onSelectCategory, onOpenRepair, onOpenTracking }: MainMenuScreenProps) {
+export function MainMenuScreen({ car, onSelectCategory, onOpenRepair }: MainMenuScreenProps) {
   const handleSelect = (id: string) => {
     haptic('medium')
-    if (id === 'repair-full') {
+    if (id === 'repair') {
       onOpenRepair()
-    } else if (id === 'tracking') {
-      onOpenTracking()
     } else {
       onSelectCategory(id)
     }
@@ -70,10 +65,10 @@ export function MainMenuScreen({ car, onSelectCategory, onOpenRepair, onOpenTrac
             >
               <div className="text-[34px] mb-3">{item.icon}</div>
               <div className="text-[17px] font-semibold text-[var(--ink)] mb-1">
-                {item.id === 'repair-full' || item.id === 'tracking' ? item.nameKey : t(item.nameKey)}
+                {item.id === 'repair' ? item.nameKey : t(item.nameKey)}
               </div>
               <div className="text-[13px] text-[var(--ink-secondary)] leading-[1.3]">
-                {item.id === 'repair-full' || item.id === 'tracking' ? item.descKey : t(item.descKey)}
+                {item.id === 'repair' ? item.descKey : t(item.descKey)}
               </div>
             </button>
           ))}

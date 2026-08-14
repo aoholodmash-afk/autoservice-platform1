@@ -162,7 +162,7 @@ export default function HomePage() {
         setScreen('my-cars')
         break
       case 'bookings':
-        setScreen('my-cars')
+        setScreen('tracking')
         break
       case 'profile':
         setScreen('my-cars')
@@ -220,7 +220,6 @@ export default function HomePage() {
             car={selectedCar}
             onSelectCategory={handleSelectCategory}
             onOpenRepair={() => setScreen('repair')}
-            onOpenTracking={() => setScreen('tracking')}
           />
         )}
 
