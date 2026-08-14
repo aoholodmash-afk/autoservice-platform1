@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { MOCK_REVIEWS, getAverageRating, getRatingDistribution, Review } from '@/data/reviews'
+import { saveReview, getReviews } from '@/lib/reviewStore'
 import { haptic } from '@/lib/constants'
 
 interface ReviewScreenProps {
@@ -22,6 +23,13 @@ export function ReviewScreen({ onBack, onSubmit }: ReviewScreenProps) {
   const handleSubmit = () => {
     if (rating === 0 || !text.trim()) return
     haptic('heavy')
+    // Persist review
+    saveReview({
+      clientName: 'Вы',
+      rating,
+      text: text.trim(),
+      serviceName: 'Обслуживание',
+    })
     onSubmit?.({ rating, text })
     setSubmitted(true)
   }

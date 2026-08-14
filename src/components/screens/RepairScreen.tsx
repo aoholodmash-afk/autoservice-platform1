@@ -6,6 +6,7 @@ import { CATEGORIES, Category } from '@/data/categories'
 import { REPAIRS, Repair } from '@/data/repairs'
 import { SavedCar } from '@/hooks/useCarStore'
 import { getProfile, saveProfile, UserProfile } from '@/lib/userProfile'
+import { saveOrder } from '@/lib/orderStore'
 import { haptic } from '@/lib/constants'
 
 interface RepairScreenProps {
@@ -14,18 +15,21 @@ interface RepairScreenProps {
   onSelectCar: (id: string) => void
   onAddCar: () => void
   onBack: () => void
+  onTrack?: (token: string) => void
+  onPay?: (amount: number, serviceName: string) => void
   initialCategory?: string | null
 }
 
 type Step = 'car' | 'category' | 'work' | 'detail' | 'booking' | 'confirm'
 
-export function RepairScreen({ cars, activeCar, onSelectCar, onAddCar, onBack, initialCategory }: RepairScreenProps) {
+export function RepairScreen({ cars, activeCar, onSelectCar, onAddCar, onBack, onTrack, onPay, initialCategory }: RepairScreenProps) {
   const [step, setStep] = useState<Step>(cars.length === 1 && activeCar ? 'category' : 'car')
   const [selectedCar, setSelectedCar] = useState<SavedCar | null>(activeCar)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null)
   const [availableWorks, setAvailableWorks] = useState<Repair[]>([])
+  const [orderToken, setOrderToken] = useState('')
 
   // Booking form state
   const [bookingDate, setBookingDate] = useState('')
@@ -97,7 +101,7 @@ export function RepairScreen({ cars, activeCar, onSelectCar, onAddCar, onBack, i
   }
 
   const handleBookingSubmit = async () => {
-    if (!bookingName || !bookingPhone || !bookingDate) return
+    if (!bookingName || !bookingPhone || !bookingDate || !selectedRepair) return
     haptic('heavy')
     setBookingLoading(true)
 
@@ -106,8 +110,24 @@ export function RepairScreen({ cars, activeCar, onSelectCar, onAddCar, onBack, i
 
     // Simulate API
     await new Promise(r => setTimeout(r, 1000))
-    const num = `WO-${String(Math.floor(Math.random() * 9000) + 1000)}`
-    setOrderNumber(num)
+
+    // Persist order
+    const order = saveOrder({
+      clientName: bookingName,
+      clientPhone: bookingPhone,
+      vehicleName: selectedCar ? `${selectedCar.brandName} ${selectedCar.modelName}` : '',
+      serviceName: selectedRepair.name,
+      category: selectedCategory?.id || '',
+      date: bookingDate,
+      time: bookingTime || undefined,
+      laborPrice: selectedRepair.laborPrice,
+      partsPrice: calcMinPrice(selectedRepair) - selectedRepair.laborPrice,
+      totalPrice: calcMinPrice(selectedRepair),
+      notes: bookingComment || undefined,
+    })
+
+    setOrderNumber(order.id)
+    setOrderToken(order.token)
     setBookingLoading(false)
     setStep('confirm')
   }
@@ -501,7 +521,7 @@ export function RepairScreen({ cars, activeCar, onSelectCar, onAddCar, onBack, i
               <button onClick={onBack} className="flex-1 h-[50px] bg-[var(--fill)] text-[var(--ink)] rounded-[13px] font-semibold text-[15px]">
                 На главную
               </button>
-              <button onClick={onBack} className="flex-1 h-[50px] bg-[var(--accent)] text-white rounded-[13px] font-semibold text-[15px]">
+              <button onClick={() => onTrack ? onTrack(orderToken) : onBack()} className="flex-1 h-[50px] bg-[var(--accent)] text-white rounded-[13px] font-semibold text-[15px]">
                 Отследить
               </button>
             </div>

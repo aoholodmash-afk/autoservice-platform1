@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { haptic } from '@/lib/constants'
+import { getLocation, saveLocation } from '@/lib/locationStore'
 
 export interface Location {
   id: string
@@ -26,6 +27,20 @@ interface LocationSelectProps {
 }
 
 export function LocationSelect({ onSelect, onBack, currentLocationId }: LocationSelectProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(currentLocationId || null)
+
+  useEffect(() => {
+    const saved = getLocation()
+    if (saved) setSelectedId(saved.id)
+  }, [])
+
+  const handleSelect = (loc: Location) => {
+    haptic('medium')
+    setSelectedId(loc.id)
+    saveLocation({ id: loc.id, name: loc.name, address: loc.address, phone: loc.phone })
+    onSelect(loc)
+  }
+
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       <div className="sticky top-0 z-10 bg-[var(--card)] border-b border-[var(--separator)]">
@@ -41,9 +56,9 @@ export function LocationSelect({ onSelect, onBack, currentLocationId }: Location
       <div className="px-4 pt-4 pb-8">
         <div className="space-y-3">
           {LOCATIONS.map((loc, i) => {
-            const isSelected = loc.id === currentLocationId
+            const isSelected = loc.id === selectedId
             return (
-              <button key={loc.id} onClick={() => { haptic('medium'); onSelect(loc) }}
+              <button key={loc.id} onClick={() => handleSelect(loc)}
                 className={`w-full rounded-[13px] p-4 text-left transition-all spring-up ${
                   isSelected ? 'bg-[var(--accent)] bg-opacity-10 border-2 border-[var(--accent)]' : 'bg-[var(--card)] shadow-[var(--shadow-card)] border-2 border-transparent'
                 }`}

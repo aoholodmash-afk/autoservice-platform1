@@ -1,19 +1,33 @@
 'use client'
 
-import { MOCK_ORDERS, TrackingOrder, STATUS_LABELS, STATUS_ORDER } from '@/data/tracking'
+import { useState, useEffect } from 'react'
+import { getOrders, StoredOrder } from '@/lib/orderStore'
 import { haptic } from '@/lib/constants'
 
 interface ServiceHistoryProps {
   onBack: () => void
-  onExportPDF?: () => void
 }
 
-export function ServiceHistory({ onBack, onExportPDF }: ServiceHistoryProps) {
-  const orders = MOCK_ORDERS.filter(o => o.status === 'completed')
+export function ServiceHistory({ onBack }: ServiceHistoryProps) {
+  const [orders, setOrders] = useState<StoredOrder[]>([])
+
+  useEffect(() => {
+    setOrders(getOrders())
+  }, [])
 
   const handleExport = () => {
     haptic('medium')
-    onExportPDF?.()
+    // Generate simple text report
+    const report = orders.map(o =>
+      `${o.id} | ${o.date} | ${o.serviceName} | ${o.vehicleName} | ${o.totalPrice} ₽ | ${o.status}`
+    ).join('\n')
+    const blob = new Blob([`История обслуживания\n${'='.repeat(50)}\n\n${report}`], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `service-history-${new Date().toISOString().split('T')[0]}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -29,13 +43,11 @@ export function ServiceHistory({ onBack, onExportPDF }: ServiceHistoryProps) {
       </div>
 
       <div className="px-4 pt-4 pb-8">
-        {/* Export button */}
-        <button onClick={handleExport}
-          className="w-full h-[44px] bg-[var(--accent)] text-white rounded-[13px] font-semibold text-[15px] mb-4 active:scale-[0.97] transition-transform">
-          📄 Скачать PDF отчёт
+        <button onClick={handleExport} disabled={orders.length === 0}
+          className="w-full h-[44px] bg-[var(--accent)] text-white rounded-[13px] font-semibold text-[15px] mb-4 disabled:opacity-40 active:scale-[0.97] transition-transform">
+          📄 Скачать отчёт
         </button>
 
-        {/* Orders list */}
         <div className="space-y-3">
           {orders.map((order, i) => (
             <div key={order.id} className="bg-[var(--card)] rounded-[13px] shadow-[var(--shadow-card)] p-4 spring-up"
@@ -43,20 +55,24 @@ export function ServiceHistory({ onBack, onExportPDF }: ServiceHistoryProps) {
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <div className="text-[15px] font-semibold text-[var(--ink)]">{order.serviceName}</div>
-                  <div className="text-[12px] text-[var(--ink-secondary)]">{order.vehicle} • {order.licensePlate}</div>
+                  <div className="text-[12px] text-[var(--ink-secondary)]">{order.vehicleName}</div>
                 </div>
-                <span className="text-[12px] text-[var(--ink-secondary)]">
-                  {new Date(order.updatedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                  order.status === 'completed' ? 'bg-[#34C759] bg-opacity-15 text-[#34C759]' :
+                  order.status === 'confirmed' ? 'bg-[#007AFF] bg-opacity-15 text-[#007AFF]' :
+                  'bg-[#FF9500] bg-opacity-15 text-[#FF9500]'
+                }`}>
+                  {order.status === 'completed' ? 'Выполнен' : order.status === 'confirmed' ? 'Подтверждён' : order.status}
                 </span>
               </div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[11px] text-[var(--ink-secondary)]">{order.id}</span>
                 <span className="text-[11px] text-[var(--ink-secondary)]">•</span>
-                <span className="text-[11px] text-[var(--ink-secondary)]">{order.mechanicName}</span>
+                <span className="text-[11px] text-[var(--ink-secondary)]">{new Date(order.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-[var(--separator)]">
                 <span className="text-[13px] text-[var(--ink-secondary)]">Итого</span>
-                <span className="text-[16px] font-bold text-[var(--accent)]">{order.totalAmount.toLocaleString('ru-RU')} ₽</span>
+                <span className="text-[16px] font-bold text-[var(--accent)]">{order.totalPrice.toLocaleString('ru-RU')} ₽</span>
               </div>
             </div>
           ))}

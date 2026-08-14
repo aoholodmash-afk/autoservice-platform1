@@ -1,15 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LOYALTY_LEVELS, getLoyaltyLevel, getNextLevel, getPointsForNextLevel } from '@/data/loyalty'
+import { getTotalSpent } from '@/lib/orderStore'
 import { haptic } from '@/lib/constants'
 
 interface LoyaltyScreenProps {
-  totalSpent?: number
   onBack: () => void
 }
 
-export function LoyaltyScreen({ totalSpent = 12500, onBack }: LoyaltyScreenProps) {
+export function LoyaltyScreen({ onBack }: LoyaltyScreenProps) {
+  const [totalSpent, setTotalSpent] = useState(0)
+
+  useEffect(() => {
+    setTotalSpent(getTotalSpent())
+  }, [])
   const currentLevel = getLoyaltyLevel(totalSpent)
   const nextLevel = getNextLevel(currentLevel)
   const pointsNeeded = getPointsForNextLevel(totalSpent, currentLevel)

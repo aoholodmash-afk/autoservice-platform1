@@ -21,7 +21,7 @@ interface MainMenuScreenProps {
 const MENU_ITEMS = [
   { id: 'to', icon: '🛢', name: 'ТО', desc: 'Масло, фильтры, жидкости', category: 'to' },
   { id: 'repair', icon: '🔧', name: 'Ремонт', desc: 'Запчасти, цены, запись', category: null },
-  { id: 'diagnostic', icon: '🔍', name: 'Диагностика', desc: 'Компьютерная проверка', category: null },
+  { id: 'diagnostic', icon: '🔍', name: 'Диагностика', desc: 'Компьютерная проверка', category: 'electrical' },
   { id: 'tires', icon: '🛞', name: 'Шиномонтаж', desc: 'Замена и ремонт шин', category: null },
   { id: 'calculator', icon: '🧮', name: 'Калькулятор ТО', desc: 'Что менять по пробегу', category: null },
   { id: 'reviews', icon: '⭐', name: 'Отзывы', desc: 'Оценки клиентов', category: null },

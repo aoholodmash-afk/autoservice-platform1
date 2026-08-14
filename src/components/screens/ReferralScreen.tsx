@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { haptic } from '@/lib/constants'
 
 interface ReferralScreenProps {
@@ -9,7 +9,8 @@ interface ReferralScreenProps {
 
 export function ReferralScreen({ onBack }: ReferralScreenProps) {
   const [copied, setCopied] = useState(false)
-  const referralCode = 'AUTO-' + Math.random().toString(36).slice(2, 8).toUpperCase()
+  // FIX: useRef so code doesn't regenerate on every render
+  const referralCode = useRef('AUTO-' + Math.random().toString(36).slice(2, 8).toUpperCase()).current
   const referralLink = `https://autoservice.app/ref/${referralCode}`
 
   const handleCopy = () => {

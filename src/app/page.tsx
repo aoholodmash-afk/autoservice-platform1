@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useCarStore, SavedCar } from '@/hooks/useCarStore'
 import { t, initLocale } from '@/lib/i18n'
 import { initTheme } from '@/lib/theme'
@@ -28,22 +28,9 @@ import { PaymentScreen } from '@/components/screens/PaymentScreen'
 import { TabBar, HomeIcon, CarIcon, CalendarIcon, ProfileIcon } from '@/components/ui/TabBar'
 
 type Screen =
-  | 'welcome'
-  | 'wizard'
-  | 'my-cars'
-  | 'main-menu'
-  | 'repair'
-  | 'tracking'
-  | 'calculator'
-  | 'reviews'
-  | 'checklist'
-  | 'loyalty'
-  | 'history'
-  | 'chat'
-  | 'referral'
-  | 'warranty'
-  | 'location'
-  | 'payment'
+  | 'welcome' | 'wizard' | 'my-cars' | 'main-menu' | 'repair' | 'tracking'
+  | 'calculator' | 'reviews' | 'checklist' | 'loyalty' | 'history'
+  | 'chat' | 'referral' | 'warranty' | 'location' | 'payment'
 
 type Tab = 'home' | 'cars' | 'bookings' | 'profile'
 
@@ -53,21 +40,25 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [wizardReturnTo, setWizardReturnTo] = useState<Screen>('my-cars')
   const [repairCategory, setRepairCategory] = useState<string | null>(null)
+  const [paymentData, setPaymentData] = useState<{ amount: number; serviceName: string }>({ amount: 500, serviceName: 'Предоплата' })
+  const hasInitialized = useRef(false)
 
   useEffect(() => {
     initTheme()
     initLocale()
   }, [])
 
+  // FIX #1: Only run once on initial load, not on every cars.length change
   useEffect(() => {
-    if (!isLoaded) return
+    if (!isLoaded || hasInitialized.current) return
+    hasInitialized.current = true
     if (cars.length > 0) {
       setScreen('my-cars')
       setActiveTab('cars')
     } else {
       setScreen('welcome')
     }
-  }, [isLoaded, cars.length])
+  }, [isLoaded])
 
   const handleAddCar = (returnTo: Screen = 'my-cars') => {
     haptic('light')
@@ -81,6 +72,7 @@ export default function HomePage() {
   }) => {
     const newCar = addCar(carData)
     setActiveCar(newCar.id)
+    // FIX #1: Navigate to returnTo, not overridden by useEffect
     setScreen(wizardReturnTo)
   }
 
@@ -104,8 +96,9 @@ export default function HomePage() {
       setScreen('main-menu')
       setActiveTab('home')
     } else if (cars.length > 0) {
-      setScreen('my-cars')
-      setActiveTab('cars')
+      setActiveCar(cars[0].id)
+      setScreen('main-menu')
+      setActiveTab('home')
     } else {
       setScreen('welcome')
     }
@@ -122,8 +115,13 @@ export default function HomePage() {
         break
       case 'cars': setScreen('my-cars'); break
       case 'bookings': setScreen('tracking'); break
-      case 'profile': setScreen('my-cars'); break
+      case 'profile': setScreen('loyalty'); break
     }
+  }
+
+  const handleOpenPayment = (amount: number, serviceName: string) => {
+    setPaymentData({ amount, serviceName })
+    setScreen('payment')
   }
 
   if (!isLoaded) {
@@ -134,14 +132,25 @@ export default function HomePage() {
     )
   }
 
+  // FIX #2: Safe accessor — fallback to my-cars if activeCar is null
+  const requireCar = (screenName: Screen): boolean => {
+    if (!activeCar) {
+      setScreen('my-cars')
+      setActiveTab('cars')
+      return false
+    }
+    return true
+  }
+
   const tabs = [
     { id: 'home', label: t('tab.home'), icon: <HomeIcon />, activeIcon: <HomeIcon active /> },
     { id: 'cars', label: t('tab.cars'), icon: <CarIcon />, activeIcon: <CarIcon active /> },
     { id: 'bookings', label: t('tab.bookings'), icon: <CalendarIcon />, activeIcon: <CalendarIcon active /> },
-    { id: 'profile', label: t('tab.profile'), icon: <ProfileIcon />, activeIcon: <ProfileIcon active /> },
+    { id: 'profile', label: 'Ещё', icon: <ProfileIcon />, activeIcon: <ProfileIcon active /> },
   ]
 
-  const showTabBar = ['my-cars', 'main-menu'].includes(screen)
+  // FIX #4: tracking shows tab bar
+  const showTabBar = ['my-cars', 'main-menu', 'tracking'].includes(screen)
 
   return (
     <div className="mx-auto max-w-[430px] min-h-screen bg-[var(--bg)] relative">
@@ -177,13 +186,17 @@ export default function HomePage() {
 
         {screen === 'repair' && (
           <RepairScreen cars={cars} activeCar={activeCar} onSelectCar={(id) => setActiveCar(id)}
-            onAddCar={() => handleAddCar('repair')} onBack={handleGoHome} initialCategory={repairCategory} />
+            onAddCar={() => handleAddCar('repair')} onBack={handleGoHome}
+            onTrack={(token) => setScreen('tracking')}
+            onPay={handleOpenPayment}
+            initialCategory={repairCategory} />
         )}
 
         {screen === 'tracking' && <TrackingScreen onBack={handleGoHome} />}
 
         {screen === 'calculator' && activeCar && (
-          <TOCalculatorScreen car={activeCar} onBack={handleGoHome} onBook={(items) => { setScreen('repair') }} />
+          <TOCalculatorScreen car={activeCar} onBack={handleGoHome}
+            onBook={(items) => { setRepairCategory('to'); setScreen('repair') }} />
         )}
 
         {screen === 'reviews' && <ReviewScreen onBack={handleGoHome} />}
@@ -200,10 +213,14 @@ export default function HomePage() {
 
         {screen === 'warranty' && <WarrantyScreen onBack={handleGoHome} />}
 
-        {screen === 'location' && <LocationSelect onBack={handleGoHome} onSelect={(loc) => handleGoHome()} />}
+        {/* FIX #3: Payment screen is now reachable */}
+        {screen === 'payment' && (
+          <PaymentScreen amount={paymentData.amount} serviceName={paymentData.serviceName}
+            onConfirm={handleGoHome} onBack={handleGoHome} />
+        )}
 
-        {screen === 'payment' && activeCar && (
-          <PaymentScreen amount={500} serviceName="Предоплата" onConfirm={handleGoHome} onBack={handleGoHome} />
+        {screen === 'location' && (
+          <LocationSelect onBack={handleGoHome} onSelect={(loc) => handleGoHome()} />
         )}
       </div>
 

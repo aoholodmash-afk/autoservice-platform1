@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { CHECKLIST_TEMPLATES, CHECKLIST_CATEGORIES, createChecklist, ChecklistItem } from '@/data/checklist'
+import { saveChecklist } from '@/lib/checklistStore'
 import { haptic } from '@/lib/constants'
 
 interface InspectionReportProps {
@@ -41,6 +42,9 @@ export function InspectionReport({ onBack, onSave }: InspectionReportProps) {
 
   const handleSave = () => {
     haptic('heavy')
+    if (selectedTemplate) {
+      saveChecklist(selectedTemplate, checklist, 'Автомобиль')
+    }
     onSave?.(checklist)
     setSaved(true)
   }
