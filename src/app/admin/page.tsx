@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { SERVICES, CATEGORIES, ServiceItem } from '@/data/services'
 import { MOCK_CLIENTS, Client, ClientCar } from '@/data/clients'
 import { MOCK_JOURNAL, JournalEntry } from '@/data/journal'
-import { MOCK_STOCK, getStockCategories, getStockStatus, getLowStockItems, StockItem } from '@/data/stock'
+import { MOCK_STOCK, getStockCategories, getStockStatus, getLowStockItems, StockItem, MOCK_MOVEMENTS, StockMovement, getMovementsByType, getTotalStockValue, getIncomingTotal, getOutgoingTotal } from '@/data/stock'
 
 // ===== TYPES =====
 
@@ -1051,133 +1051,553 @@ function ClientsSection() {
   )
 }
 
-// ===== STOCK (1C INTEGRATION) =====
+// ===== STOCK (WAREHOUSE MANAGEMENT) =====
+
+type StockTab = 'balance' | 'incoming' | 'outgoing' | 'movements'
 
 function StockSection() {
-  const [category, setCategory] = useState('all')
+  const [tab, setTab] = useState<StockTab>('balance')
+  const [stockItems, setStockItems] = useState<StockItem[]>(MOCK_STOCK)
+  const [movements, setMovements] = useState<StockMovement[]>(MOCK_MOVEMENTS)
   const [search, setSearch] = useState('')
-  const categories = ['all', ...getStockCategories()]
+  const [category, setCategory] = useState('all')
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [editingItem, setEditingItem] = useState<StockItem | null>(null)
 
-  const filtered = MOCK_STOCK.filter(item => {
-    const matchesCategory = category === 'all' || item.category === category
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || item.article.toLowerCase().includes(search.toLowerCase())
-    return matchesCategory && matchesSearch
+  const categories = ['all', ...getStockCategories()]
+  const lowStockCount = stockItems.filter(i => i.quantity <= i.minQuantity).length
+  const totalValue = stockItems.reduce((s, i) => s + i.quantity * i.purchasePrice, 0)
+  const incomingTotal = movements.filter(m => m.type === 'incoming').reduce((s, m) => s + m.total, 0)
+  const outgoingTotal = movements.filter(m => m.type === 'outgoing').reduce((s, m) => s + m.total, 0)
+
+  const tabs = [
+    { id: 'balance' as StockTab, label: 'Остатки', icon: '📦' },
+    { id: 'incoming' as StockTab, label: 'Приход', icon: '📥' },
+    { id: 'outgoing' as StockTab, label: 'Расход', icon: '📤' },
+    { id: 'movements' as StockTab, label: 'Журнал', icon: '📋' },
+  ]
+
+  const filteredItems = stockItems.filter(item => {
+    const matchCat = category === 'all' || item.category === category
+    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase()) || item.article.toLowerCase().includes(search.toLowerCase())
+    return matchCat && matchSearch
   })
 
-  const lowStockCount = getLowStockItems().length
-  const totalValue = MOCK_STOCK.reduce((sum, item) => sum + (item.quantity * item.purchasePrice), 0)
+  const addMovement = (movement: StockMovement) => {
+    setMovements(prev => [movement, ...prev])
+    if (movement.type === 'incoming') {
+      setStockItems(prev => prev.map(i => i.id === movement.itemId ? { ...i, quantity: i.quantity + movement.quantity, status: 'in_stock' } : i))
+    } else {
+      setStockItems(prev => prev.map(i => i.id === movement.itemId ? { ...i, quantity: Math.max(0, i.quantity - movement.quantity) } : i))
+    }
+  }
 
   return (
     <div className="space-y-4">
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="bg-white rounded-[13px] p-4 shadow-sm">
-          <div className="text-[13px] text-[#8E8E93] mb-1">Позиций на складе</div>
-          <div className="text-[22px] font-bold text-[#1C1C1E]">{MOCK_STOCK.length}</div>
+          <div className="text-[11px] text-[#8E8E93] mb-1">Позиций</div>
+          <div className="text-[22px] font-bold text-[#1C1C1E]">{stockItems.length}</div>
         </div>
         <div className="bg-white rounded-[13px] p-4 shadow-sm">
-          <div className="text-[13px] text-[#8E8E93] mb-1">Стоимость склада</div>
-          <div className="text-[22px] font-bold text-[#1C1C1E]">{totalValue.toLocaleString('ru-RU')} ₽</div>
+          <div className="text-[11px] text-[#8E8E93] mb-1">Стоимость склада</div>
+          <div className="text-[22px] font-bold text-[#1C1C1E]">{(totalValue / 1000).toFixed(0)}к ₽</div>
         </div>
         <div className="bg-white rounded-[13px] p-4 shadow-sm">
-          <div className="text-[13px] text-[#8E8E93] mb-1">Заканчивается</div>
-          <div className="text-[22px] font-bold text-[#FF3B30]">{lowStockCount} позиций</div>
+          <div className="text-[11px] text-[#8E8E93] mb-1">Заканчивается</div>
+          <div className="text-[22px] font-bold text-[#FF3B30]">{lowStockCount}</div>
+        </div>
+        <div className="bg-white rounded-[13px] p-4 shadow-sm">
+          <div className="text-[11px] text-[#8E8E93] mb-1">Приход (мес.)</div>
+          <div className="text-[22px] font-bold text-[#34C759]">{(incomingTotal / 1000).toFixed(0)}к ₽</div>
+        </div>
+        <div className="bg-white rounded-[13px] p-4 shadow-sm">
+          <div className="text-[11px] text-[#8E8E93] mb-1">Расход (мес.)</div>
+          <div className="text-[22px] font-bold text-[#FF9500]">{(outgoingTotal / 1000).toFixed(0)}к ₽</div>
         </div>
       </div>
 
       {/* 1C Integration banner */}
-      <div className="bg-gradient-to-r from-[#5856D6] to-[#007AFF] rounded-[13px] p-5 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-[17px] font-semibold mb-1">Интеграция с 1С</h3>
-            <p className="text-[13px] opacity-80">Синхронизация склада с 1С:Магазин автозапчастей</p>
-          </div>
-          <button className="h-[36px] px-4 bg-white/20 rounded-[10px] text-[15px] font-medium hover:bg-white/30 transition-colors">
-            Настроить
+      <div className="bg-gradient-to-r from-[#5856D6] to-[#007AFF] rounded-[13px] p-4 text-white flex items-center justify-between">
+        <div>
+          <h3 className="text-[15px] font-semibold">Интеграция с 1С:Магазин автозапчастей</h3>
+          <p className="text-[12px] opacity-80">Автоматическая синхронизация остатков и цен</p>
+        </div>
+        <button className="h-[32px] px-4 bg-white/20 rounded-[10px] text-[13px] font-medium hover:bg-white/30 transition-colors">
+          Настроить
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-[#F2F2F7] p-1 rounded-[10px]">
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex-1 h-[36px] rounded-[8px] text-[13px] font-medium transition-colors ${
+              tab === t.id ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93]'
+            }`}
+          >
+            {t.icon} {t.label}
           </button>
-        </div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8E8E93]" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"/>
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по названию или артикулу..."
-            className="w-full h-[40px] pl-10 pr-4 bg-white rounded-[10px] text-[15px] outline-none border border-[#E5E5EA] focus:border-[#007AFF]"
-          />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setCategory(cat)}
-              className={`px-3 h-[40px] rounded-[10px] text-[13px] font-medium transition-colors ${
-                category === cat ? 'bg-[#007AFF] text-white' : 'bg-white text-[#8E8E93] border border-[#E5E5EA]'
-              }`}
-            >
-              {cat === 'all' ? 'Все' : cat}
+      {/* TAB: Balance (Остатки) */}
+      {tab === 'balance' && (
+        <div className="space-y-4">
+          {/* Filters & Add button */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"/>
+              </svg>
+              <input
+                type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Название или артикул..."
+                className="w-full h-[36px] pl-9 pr-4 bg-white rounded-[10px] text-[14px] outline-none border border-[#E5E5EA] focus:border-[#007AFF]"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {categories.map(cat => (
+                <button key={cat} onClick={() => setCategory(cat)}
+                  className={`px-3 h-[36px] rounded-[10px] text-[12px] font-medium transition-colors ${
+                    category === cat ? 'bg-[#007AFF] text-white' : 'bg-white text-[#8E8E93] border border-[#E5E5EA]'
+                  }`}
+                >{cat === 'all' ? 'Все' : cat}</button>
+              ))}
+            </div>
+            <button onClick={() => setShowAddForm(true)} className="h-[36px] px-4 bg-[#34C759] text-white rounded-[10px] text-[13px] font-semibold whitespace-nowrap">
+              + Добавить
             </button>
-          ))}
+          </div>
+
+          {/* Add/Edit form */}
+          {(showAddForm || editingItem) && (
+            <AddEditPartForm
+              item={editingItem}
+              onSave={(item) => {
+                if (editingItem) {
+                  setStockItems(prev => prev.map(i => i.id === item.id ? item : i))
+                } else {
+                  setStockItems(prev => [...prev, { ...item, id: `s${Date.now()}` }])
+                }
+                setShowAddForm(false)
+                setEditingItem(null)
+              }}
+              onCancel={() => { setShowAddForm(false); setEditingItem(null) }}
+            />
+          )}
+
+          {/* Stock table */}
+          <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-[#F2F2F7]">
+                    <th className="px-3 py-2 text-left text-[11px] font-medium text-[#8E8E93]">Название</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium text-[#8E8E93]">Артикул</th>
+                    <th className="px-3 py-2 text-center text-[11px] font-medium text-[#8E8E93]">Остаток</th>
+                    <th className="px-3 py-2 text-right text-[11px] font-medium text-[#8E8E93]">Закупка</th>
+                    <th className="px-3 py-2 text-right text-[11px] font-medium text-[#8E8E93]">Продажа</th>
+                    <th className="px-3 py-2 text-center text-[11px] font-medium text-[#8E8E93]">Статус</th>
+                    <th className="px-3 py-2 text-center text-[11px] font-medium text-[#8E8E93]">Действия</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E5E5EA]">
+                  {filteredItems.map(item => {
+                    const status = getStockStatus(item)
+                    return (
+                      <tr key={item.id} className="hover:bg-[#F2F2F7] transition-colors">
+                        <td className="px-3 py-2">
+                          <div className="text-[13px] font-medium text-[#1C1C1E]">{item.name}</div>
+                          <div className="text-[10px] text-[#8E8E93]">{item.brand} • {item.category}</div>
+                        </td>
+                        <td className="px-3 py-2 text-[11px] font-mono text-[#8E8E93]">{item.article}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`text-[14px] font-bold ${item.quantity === 0 ? 'text-[#FF3B30]' : item.quantity <= item.minQuantity ? 'text-[#FF9500]' : 'text-[#1C1C1E]'}`}>
+                            {item.quantity}
+                          </span>
+                          <span className="text-[10px] text-[#8E8E93]"> / {item.minQuantity}</span>
+                        </td>
+                        <td className="px-3 py-2 text-right text-[13px] text-[#8E8E93]">{item.purchasePrice} ₽</td>
+                        <td className="px-3 py-2 text-right text-[13px] font-medium text-[#1C1C1E]">{item.sellPrice} ₽</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${status.color}`}>{status.label}</span>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <div className="flex gap-1 justify-center">
+                            <button onClick={() => setEditingItem(item)} className="px-2 py-1 rounded-lg text-[11px] bg-[#F2F2F7] text-[#007AFF] hover:bg-[#007AFF] hover:text-white transition-colors">✏️</button>
+                            <button onClick={() => setStockItems(prev => prev.filter(i => i.id !== item.id))} className="px-2 py-1 rounded-lg text-[11px] bg-[#F2F2F7] text-[#FF3B30] hover:bg-[#FF3B30] hover:text-white transition-colors">🗑</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Incoming (Приход) */}
+      {tab === 'incoming' && (
+        <IncomingTab stockItems={stockItems} movements={movements} onAddMovement={addMovement} />
+      )}
+
+      {/* TAB: Outgoing (Расход) */}
+      {tab === 'outgoing' && (
+        <OutgoingTab stockItems={stockItems} movements={movements} onAddMovement={addMovement} />
+      )}
+
+      {/* TAB: Movements (Журнал) */}
+      {tab === 'movements' && (
+        <MovementsTab movements={movements} />
+      )}
+    </div>
+  )
+}
+
+// Add/Edit part form
+function AddEditPartForm({ item, onSave, onCancel }: { item: StockItem | null; onSave: (item: StockItem) => void; onCancel: () => void }) {
+  const [form, setForm] = useState<StockItem>(item || {
+    id: '', name: '', article: '', brand: '', category: 'Фильтры',
+    quantity: 0, minQuantity: 1, purchasePrice: 0, sellPrice: 0, supplier: '', status: 'in_stock',
+  })
+
+  const save = () => {
+    if (!form.name || !form.article) return
+    onSave({ ...form, status: form.quantity === 0 ? 'out_of_stock' : form.quantity <= form.minQuantity ? 'low' : 'in_stock' })
+  }
+
+  return (
+    <div className="bg-white rounded-[13px] shadow-sm p-5 border-2 border-[#007AFF]">
+      <h4 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">{item ? 'Редактировать' : 'Добавить'} запчасть</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Название *</label>
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Артикул *</label>
+          <input value={form.article} onChange={(e) => setForm({ ...form, article: e.target.value })} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Бренд</label>
+          <input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Категория</label>
+          <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none">
+            {getStockCategories().map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Количество</label>
+          <input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: parseInt(e.target.value) || 0 })} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Мин. остаток</label>
+          <input type="number" value={form.minQuantity} onChange={(e) => setForm({ ...form, minQuantity: parseInt(e.target.value) || 0 })} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Закупочная цена ₽</label>
+          <input type="number" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: parseInt(e.target.value) || 0 })} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Продажная цена ₽</label>
+          <input type="number" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: parseInt(e.target.value) || 0 })} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30" />
+        </div>
+        <div>
+          <label className="text-[11px] text-[#8E8E93] mb-1 block">Поставщик</label>
+          <input value={form.supplier || ''} onChange={(e) => setForm({ ...form, supplier: e.target.value })} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30" />
         </div>
       </div>
+      <div className="flex gap-2">
+        <button onClick={save} className="h-[36px] px-6 bg-[#34C759] text-white rounded-[10px] text-[13px] font-semibold">Сохранить</button>
+        <button onClick={onCancel} className="h-[36px] px-4 bg-[#F2F2F7] text-[#8E8E93] rounded-[10px] text-[13px] font-medium">Отмена</button>
+      </div>
+    </div>
+  )
+}
 
-      {/* Stock table */}
+// Incoming tab
+function IncomingTab({ stockItems, movements, onAddMovement }: { stockItems: StockItem[]; movements: StockMovement[]; onAddMovement: (m: StockMovement) => void }) {
+  const [showForm, setShowForm] = useState(false)
+  const [selectedItem, setSelectedItem] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [price, setPrice] = useState('')
+  const [supplier, setSupplier] = useState('АвтоДок')
+  const [docNumber, setDocNumber] = useState(`ПРХ-${String(movements.filter(m => m.type === 'incoming').length + 1).padStart(3, '0')}`)
+  const [note, setNote] = useState('')
+
+  const incomingMovements = movements.filter(m => m.type === 'incoming').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+  const handleSubmit = () => {
+    const item = stockItems.find(i => i.id === selectedItem)
+    if (!item || !quantity || !price) return
+    const qty = parseInt(quantity)
+    const prc = parseInt(price)
+    onAddMovement({
+      id: `m${Date.now()}`,
+      itemId: item.id,
+      itemName: item.name,
+      itemArticle: item.article,
+      type: 'incoming',
+      quantity: qty,
+      price: prc,
+      total: qty * prc,
+      date: new Date().toISOString(),
+      document: docNumber,
+      supplier,
+      responsible: 'Админ',
+      note,
+    })
+    setShowForm(false)
+    setSelectedItem('')
+    setQuantity('')
+    setPrice('')
+    setNote('')
+    setDocNumber(`ПРХ-${String(movements.filter(m => m.type === 'incoming').length + 2).padStart(3, '0')}`)
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Add incoming button */}
+      <button onClick={() => setShowForm(!showForm)} className="w-full h-[44px] bg-[#34C759] text-white rounded-[13px] font-semibold text-[15px] flex items-center justify-center gap-2">
+        📥 Оформить приход
+      </button>
+
+      {/* Incoming form */}
+      {showForm && (
+        <div className="bg-white rounded-[13px] shadow-sm p-5 border-2 border-[#34C759]">
+          <h4 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">Новый приход</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Запчасть *</label>
+              <select value={selectedItem} onChange={(e) => { setSelectedItem(e.target.value); const it = stockItems.find(i => i.id === e.target.value); if (it) setPrice(String(it.purchasePrice)) }} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none">
+                <option value="">Выберите...</option>
+                {stockItems.map(i => <option key={i.id} value={i.id}>{i.name} ({i.brand}) — {i.article}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Количество *</label>
+              <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#34C759] focus:ring-opacity-30" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Цена за ед. ₽ *</label>
+              <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#34C759] focus:ring-opacity-30" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Поставщик</label>
+              <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Документ №</label>
+              <input value={docNumber} onChange={(e) => setDocNumber(e.target.value)} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Примечание</label>
+              <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none" />
+            </div>
+          </div>
+          {quantity && price && (
+            <div className="bg-[#34C759] bg-opacity-10 rounded-[8px] p-3 mb-4 text-[14px] text-[#34C759] font-medium">
+              Итого: {(parseInt(quantity) * parseInt(price)).toLocaleString('ru-RU')} ₽
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button onClick={handleSubmit} disabled={!selectedItem || !quantity || !price} className="h-[36px] px-6 bg-[#34C759] text-white rounded-[10px] text-[13px] font-semibold disabled:opacity-40">Оприходовать</button>
+            <button onClick={() => setShowForm(false)} className="h-[36px] px-4 bg-[#F2F2F7] text-[#8E8E93] rounded-[10px] text-[13px]">Отмена</button>
+          </div>
+        </div>
+      )}
+
+      {/* Incoming history */}
       <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#F2F2F7]">
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-[#8E8E93]">Название</th>
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-[#8E8E93]">Артикул</th>
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-[#8E8E93]">Категория</th>
-                <th className="px-4 py-3 text-center text-[13px] font-medium text-[#8E8E93]">Кол-во</th>
-                <th className="px-4 py-3 text-right text-[13px] font-medium text-[#8E8E93]">Закупка</th>
-                <th className="px-4 py-3 text-right text-[13px] font-medium text-[#8E8E93]">Продажа</th>
-                <th className="px-4 py-3 text-center text-[13px] font-medium text-[#8E8E93]">Статус</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E5E5EA]">
-              {filtered.map(item => {
-                const status = getStockStatus(item)
-                return (
-                  <tr key={item.id} className="hover:bg-[#F2F2F7] transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="text-[15px] font-medium text-[#1C1C1E]">{item.name}</div>
-                      <div className="text-[11px] text-[#8E8E93]">{item.brand}</div>
-                    </td>
-                    <td className="px-4 py-3 text-[13px] font-mono text-[#8E8E93]">{item.article}</td>
-                    <td className="px-4 py-3 text-[13px] text-[#1C1C1E]">{item.category}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`text-[15px] font-semibold ${
-                        item.quantity === 0 ? 'text-[#FF3B30]' :
-                        item.quantity <= item.minQuantity ? 'text-[#FF9500]' : 'text-[#1C1C1E]'
-                      }`}>
-                        {item.quantity}
-                      </span>
-                      <span className="text-[11px] text-[#8E8E93]"> / {item.minQuantity}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-[15px] text-[#8E8E93]">{item.purchasePrice.toLocaleString('ru-RU')} ₽</td>
-                    <td className="px-4 py-3 text-right text-[15px] font-medium text-[#1C1C1E]">{item.sellPrice.toLocaleString('ru-RU')} ₽</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${status.color}`}>
-                        {status.label}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="px-4 py-3 bg-[#F2F2F7] flex items-center justify-between">
+          <span className="text-[13px] font-medium text-[#8E8E93]">ИСТОРИЯ ПРИХОДА</span>
+          <span className="text-[13px] font-medium text-[#34C759]">Итого: {incomingTotal(incomingMovements).toLocaleString('ru-RU')} ₽</span>
+        </div>
+        <div className="divide-y divide-[#E5E5EA]">
+          {incomingMovements.slice(0, 10).map(m => (
+            <div key={m.id} className="px-4 py-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-[8px] bg-[#34C759] bg-opacity-15 flex items-center justify-center text-[14px]">📥</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium text-[#1C1C1E] truncate">{m.itemName}</div>
+                <div className="text-[11px] text-[#8E8E93]">{m.supplier} • {m.document} • {m.quantity} шт × {m.price} ₽</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[14px] font-semibold text-[#34C759]">+{m.total.toLocaleString('ru-RU')} ₽</div>
+                <div className="text-[10px] text-[#8E8E93]">{new Date(m.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   )
+}
+
+// Outgoing tab
+function OutgoingTab({ stockItems, movements, onAddMovement }: { stockItems: StockItem[]; movements: StockMovement[]; onAddMovement: (m: StockMovement) => void }) {
+  const [showForm, setShowForm] = useState(false)
+  const [selectedItem, setSelectedItem] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [orderNumber, setOrderNumber] = useState('')
+  const [note, setNote] = useState('')
+
+  const outgoingMovements = movements.filter(m => m.type === 'outgoing').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+  const handleSubmit = () => {
+    const item = stockItems.find(i => i.id === selectedItem)
+    if (!item || !quantity) return
+    const qty = parseInt(quantity)
+    onAddMovement({
+      id: `m${Date.now()}`,
+      itemId: item.id,
+      itemName: item.name,
+      itemArticle: item.article,
+      type: 'outgoing',
+      quantity: qty,
+      price: item.sellPrice,
+      total: qty * item.sellPrice,
+      date: new Date().toISOString(),
+      orderNumber: orderNumber || undefined,
+      responsible: 'Админ',
+      note,
+    })
+    setShowForm(false)
+    setSelectedItem('')
+    setQuantity('')
+    setOrderNumber('')
+    setNote('')
+  }
+
+  return (
+    <div className="space-y-4">
+      <button onClick={() => setShowForm(!showForm)} className="w-full h-[44px] bg-[#FF9500] text-white rounded-[13px] font-semibold text-[15px] flex items-center justify-center gap-2">
+        📤 Оформить расход
+      </button>
+
+      {showForm && (
+        <div className="bg-white rounded-[13px] shadow-sm p-5 border-2 border-[#FF9500]">
+          <h4 className="text-[15px] font-semibold text-[#1C1C1E] mb-4">Новый расход</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Запчасть *</label>
+              <select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none">
+                <option value="">Выберите...</option>
+                {stockItems.filter(i => i.quantity > 0).map(i => <option key={i.id} value={i.id}>{i.name} ({i.brand}) — остаток: {i.quantity}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Количество *</label>
+              <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" max={stockItems.find(i => i.id === selectedItem)?.quantity || 0} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-opacity-30" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Заказ-наряд</label>
+              <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="WO-XXX" className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[#8E8E93] mb-1 block">Примечание</label>
+              <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-[36px] px-3 bg-[#F2F2F7] rounded-[8px] text-[14px] outline-none" />
+            </div>
+          </div>
+          {selectedItem && quantity && (
+            <div className="bg-[#FF9500] bg-opacity-10 rounded-[8px] p-3 mb-4 text-[14px] text-[#FF9500] font-medium">
+              Списание: {parseInt(quantity)} шт × {stockItems.find(i => i.id === selectedItem)?.sellPrice} ₽ = {(parseInt(quantity) * (stockItems.find(i => i.id === selectedItem)?.sellPrice || 0)).toLocaleString('ru-RU')} ₽
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button onClick={handleSubmit} disabled={!selectedItem || !quantity} className="h-[36px] px-6 bg-[#FF9500] text-white rounded-[10px] text-[13px] font-semibold disabled:opacity-40">Списать</button>
+            <button onClick={() => setShowForm(false)} className="h-[36px] px-4 bg-[#F2F2F7] text-[#8E8E93] rounded-[10px] text-[13px]">Отмена</button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+        <div className="px-4 py-3 bg-[#F2F2F7] flex items-center justify-between">
+          <span className="text-[13px] font-medium text-[#8E8E93]">ИСТОРИЯ РАСХОДА</span>
+          <span className="text-[13px] font-medium text-[#FF9500]">Итого: {outgoingTotal(outgoingMovements).toLocaleString('ru-RU')} ₽</span>
+        </div>
+        <div className="divide-y divide-[#E5E5EA]">
+          {outgoingMovements.slice(0, 10).map(m => (
+            <div key={m.id} className="px-4 py-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-[8px] bg-[#FF9500] bg-opacity-15 flex items-center justify-center text-[14px]">📤</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium text-[#1C1C1E] truncate">{m.itemName}</div>
+                <div className="text-[11px] text-[#8E8E93]">{m.orderNumber || 'Без заказа'} • {m.quantity} шт × {m.price} ₽ • {m.responsible}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[14px] font-semibold text-[#FF9500]">-{m.total.toLocaleString('ru-RU')} ₽</div>
+                <div className="text-[10px] text-[#8E8E93]">{new Date(m.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Movements journal tab
+function MovementsTab({ movements }: { movements: StockMovement[] }) {
+  const [filter, setFilter] = useState<'all' | 'incoming' | 'outgoing'>('all')
+  const sorted = [...movements].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  const filtered = filter === 'all' ? sorted : sorted.filter(m => m.type === filter)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        {(['all', 'incoming', 'outgoing'] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`px-4 h-[32px] rounded-[8px] text-[12px] font-medium transition-colors ${
+              filter === f ? 'bg-[#007AFF] text-white' : 'bg-white text-[#8E8E93] border border-[#E5E5EA]'
+            }`}
+          >{f === 'all' ? 'Все' : f === 'incoming' ? '📥 Приход' : '📤 Расход'}</button>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+        <div className="divide-y divide-[#E5E5EA]">
+          {filtered.map(m => (
+            <div key={m.id} className="px-4 py-3 flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center text-[14px] ${
+                m.type === 'incoming' ? 'bg-[#34C759] bg-opacity-15' : 'bg-[#FF9500] bg-opacity-15'
+              }`}>
+                {m.type === 'incoming' ? '📥' : '📤'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium text-[#1C1C1E]">{m.itemName}</div>
+                <div className="text-[11px] text-[#8E8E93]">
+                  {m.type === 'incoming' ? `Поставщик: ${m.supplier}` : `Заказ: ${m.orderNumber || '—'}`}
+                  {' • '}{m.document || '—'}{' • '}{m.responsible}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-[14px] font-semibold ${m.type === 'incoming' ? 'text-[#34C759]' : 'text-[#FF9500]'}`}>
+                  {m.type === 'incoming' ? '+' : '-'}{m.quantity} шт
+                </div>
+                <div className="text-[12px] text-[#1C1C1E]">{m.total.toLocaleString('ru-RU')} ₽</div>
+                <div className="text-[10px] text-[#8E8E93]">{new Date(m.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function incomingTotal(movements: StockMovement[]): number {
+  return movements.reduce((s, m) => s + m.total, 0)
+}
+
+function outgoingTotal(movements: StockMovement[]): number {
+  return movements.reduce((s, m) => s + m.total, 0)
 }
 
 // ===== JOURNAL =====
