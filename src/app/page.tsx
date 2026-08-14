@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useCarStore, SavedCar } from '@/hooks/useCarStore'
-import { getServiceById } from '@/data/services'
 import { t, initLocale } from '@/lib/i18n'
 import { initTheme } from '@/lib/theme'
 import { haptic } from '@/lib/constants'
@@ -12,10 +11,6 @@ import { WelcomeScreen } from '@/components/screens/WelcomeScreen'
 import { CarWizard } from '@/components/wizard/CarWizard'
 import { MyCarsScreen } from '@/components/screens/MyCarsScreen'
 import { MainMenuScreen } from '@/components/screens/MainMenuScreen'
-import { TOCategoryScreen } from '@/components/screens/TOCategoryScreen'
-import { ServiceDetailScreen } from '@/components/screens/ServiceDetailScreen'
-import { BookingScreen } from '@/components/screens/BookingScreen'
-import { BookingConfirmScreen } from '@/components/screens/BookingConfirmScreen'
 import { RepairScreen } from '@/components/screens/RepairScreen'
 import { TrackingScreen } from '@/components/screens/TrackingScreen'
 
@@ -27,29 +22,17 @@ type Screen =
   | 'wizard'
   | 'my-cars'
   | 'main-menu'
-  | 'category'
-  | 'service-detail'
-  | 'booking'
-  | 'booking-confirm'
   | 'repair'
   | 'tracking'
-  | 'profile'
 
 type Tab = 'home' | 'cars' | 'bookings' | 'profile'
 
 export default function HomePage() {
-  const { cars, isLoaded, addCar } = useCarStore()
+  const { cars, activeCar, isLoaded, addCar, setActiveCar } = useCarStore()
   const [screen, setScreen] = useState<Screen>('welcome')
   const [activeTab, setActiveTab] = useState<Tab>('home')
-  const [selectedCar, setSelectedCar] = useState<SavedCar | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [selectedService, setSelectedService] = useState<string>('')
-  const [bookingResult, setBookingResult] = useState<{
-    serviceName: string
-    carName: string
-    date: string
-    time?: string
-  } | null>(null)
+  const [wizardReturnTo, setWizardReturnTo] = useState<Screen>('my-cars')
+  const [repairCategory, setRepairCategory] = useState<string | null>(null)
 
   useEffect(() => {
     initTheme()
@@ -66,75 +49,40 @@ export default function HomePage() {
     }
   }, [isLoaded, cars.length])
 
-  const handleAddCar = () => {
+  const handleAddCar = (returnTo: Screen = 'my-cars') => {
     haptic('light')
+    setWizardReturnTo(returnTo)
     setScreen('wizard')
   }
 
   const handleWizardComplete = (carData: {
-    brandId: string
-    brandName: string
-    modelId: string
-    modelName: string
-    year: number
-    engineId: string
-    engineName: string
+    brandId: string; brandName: string; modelId: string; modelName: string;
+    year: number; engineId: string; engineName: string;
   }) => {
     const newCar = addCar(carData)
-    setSelectedCar(newCar)
-    setScreen('my-cars')
-    setActiveTab('cars')
+    setActiveCar(newCar.id)
+    setScreen(wizardReturnTo)
   }
 
   const handleWizardCancel = () => {
-    if (cars.length > 0) {
-      setScreen('my-cars')
-      setActiveTab('cars')
-    } else {
-      setScreen('welcome')
-    }
+    setScreen(cars.length > 0 ? wizardReturnTo : 'welcome')
   }
 
   const handleSelectCar = (car: SavedCar) => {
     haptic('light')
-    setSelectedCar(car)
+    setActiveCar(car.id)
     setScreen('main-menu')
   }
 
-  const handleSelectCategory = (categoryId: string) => {
-    setSelectedCategory(categoryId)
-    setScreen('category')
-  }
-
-  const handleSelectService = (serviceId: string) => {
-    setSelectedService(serviceId)
-    setScreen('service-detail')
-  }
-
-  const handleBookFromDetail = () => {
-    setScreen('booking')
-  }
-
-  const handleBookingConfirm = (booking: {
-    date: string
-    time: string
-    name: string
-    phone: string
-    comment: string
-  }) => {
-    const service = getServiceById(selectedService)
-    setBookingResult({
-      serviceName: service ? t(service.nameKey) : selectedService,
-      carName: selectedCar?.modelName || '',
-      date: booking.date,
-      time: booking.time,
-    })
-    setScreen('booking-confirm')
+  const handleOpenRepair = (categoryId?: string) => {
+    setRepairCategory(categoryId || null)
+    setScreen('repair')
   }
 
   const handleGoHome = () => {
-    if (selectedCar) {
+    if (activeCar) {
       setScreen('main-menu')
+      setActiveTab('home')
     } else if (cars.length > 0) {
       setScreen('my-cars')
       setActiveTab('cars')
@@ -146,13 +94,12 @@ export default function HomePage() {
   const handleTabChange = (tab: string) => {
     haptic('light')
     setActiveTab(tab as Tab)
-
     switch (tab) {
       case 'home':
-        if (selectedCar) {
+        if (activeCar) {
           setScreen('main-menu')
         } else if (cars.length > 0) {
-          setSelectedCar(cars[0])
+          setActiveCar(cars[0].id)
           setScreen('main-menu')
         } else {
           setScreen('welcome')
@@ -192,93 +139,48 @@ export default function HomePage() {
       <div className={showTabBar ? 'pb-24' : ''}>
         {screen === 'welcome' && (
           <WelcomeScreen
-            onAddCar={handleAddCar}
+            onAddCar={() => handleAddCar('my-cars')}
             hasExistingCars={cars.length > 0}
-            onGoToCars={() => {
-              setScreen('my-cars')
-              setActiveTab('cars')
-            }}
+            onGoToCars={() => { setScreen('my-cars'); setActiveTab('cars') }}
           />
         )}
 
         {screen === 'wizard' && (
-          <CarWizard
-            onComplete={handleWizardComplete}
-            onCancel={handleWizardCancel}
-          />
+          <CarWizard onComplete={handleWizardComplete} onCancel={handleWizardCancel} />
         )}
 
         {screen === 'my-cars' && (
           <MyCarsScreen
             onSelectCar={handleSelectCar}
-            onAddCar={handleAddCar}
+            onAddCar={() => handleAddCar('my-cars')}
           />
         )}
 
-        {screen === 'main-menu' && selectedCar && (
+        {screen === 'main-menu' && activeCar && (
           <MainMenuScreen
-            car={selectedCar}
-            onSelectCategory={handleSelectCategory}
-            onOpenRepair={() => setScreen('repair')}
+            car={activeCar}
+            onOpenRepair={handleOpenRepair}
           />
         )}
 
-        {screen === 'category' && (
-          <TOCategoryScreen
-            category={selectedCategory as any}
-            onSelectService={handleSelectService}
-            onBack={() => setScreen('main-menu')}
-          />
-        )}
-
-        {screen === 'repair' && selectedCar && (
+        {screen === 'repair' && (
           <RepairScreen
-            car={selectedCar}
-            onBack={() => setScreen('main-menu')}
+            cars={cars}
+            activeCar={activeCar}
+            onSelectCar={(id) => setActiveCar(id)}
+            onAddCar={() => handleAddCar('repair')}
+            onBack={handleGoHome}
+            initialCategory={repairCategory}
           />
         )}
 
         {screen === 'tracking' && (
-          <TrackingScreen
-            onBack={() => setScreen('main-menu')}
-          />
-        )}
-
-        {screen === 'service-detail' && selectedCar && (
-          <ServiceDetailScreen
-            serviceId={selectedService}
-            car={selectedCar}
-            onBook={handleBookFromDetail}
-            onBack={() => setScreen('category')}
-          />
-        )}
-
-        {screen === 'booking' && selectedCar && (
-          <BookingScreen
-            serviceId={selectedService}
-            car={selectedCar}
-            onConfirm={handleBookingConfirm}
-            onBack={() => setScreen('category')}
-          />
-        )}
-
-        {screen === 'booking-confirm' && bookingResult && (
-          <BookingConfirmScreen
-            serviceName={bookingResult.serviceName}
-            carName={bookingResult.carName}
-            date={bookingResult.date}
-            time={bookingResult.time}
-            onHome={handleGoHome}
-          />
+          <TrackingScreen onBack={handleGoHome} />
         )}
       </div>
 
       {showTabBar && (
-        <TabBar
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          tabs={tabs}
-        />
+        <TabBar activeTab={activeTab} onTabChange={handleTabChange} tabs={tabs} />
       )}
     </div>
   )

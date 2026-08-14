@@ -7,30 +7,24 @@ import { haptic } from '@/lib/constants'
 
 interface MainMenuScreenProps {
   car: SavedCar
-  onSelectCategory: (categoryId: string) => void
-  onOpenRepair: () => void
+  onOpenRepair: (categoryId?: string) => void
 }
 
 const MENU_ITEMS = [
-  { id: 'to', icon: '🛢', nameKey: 'menu.to', descKey: 'menu.to.desc' },
-  { id: 'repair', icon: '🔧', nameKey: 'Ремонт', descKey: 'Запчасти, цены, запись' },
-  { id: 'diagnostic', icon: '🔍', nameKey: 'menu.diagnostic', descKey: 'menu.diagnostic.desc' },
-  { id: 'tires', icon: '🛞', nameKey: 'menu.tires', descKey: 'menu.tires.desc' },
+  { id: 'to', icon: '🛢', nameKey: 'menu.to', descKey: 'menu.to.desc', repairCategory: 'to' },
+  { id: 'repair', icon: '🔧', nameKey: 'Ремонт', descKey: 'Запчасти, цены, запись', repairCategory: null },
+  { id: 'diagnostic', icon: '🔍', nameKey: 'menu.diagnostic', descKey: 'menu.diagnostic.desc', repairCategory: null },
+  { id: 'tires', icon: '🛞', nameKey: 'menu.tires', descKey: 'menu.tires.desc', repairCategory: null },
 ]
 
-export function MainMenuScreen({ car, onSelectCategory, onOpenRepair }: MainMenuScreenProps) {
-  const handleSelect = (id: string) => {
+export function MainMenuScreen({ car, onOpenRepair }: MainMenuScreenProps) {
+  const handleSelect = (item: typeof MENU_ITEMS[0]) => {
     haptic('medium')
-    if (id === 'repair') {
-      onOpenRepair()
-    } else {
-      onSelectCategory(id)
-    }
+    onOpenRepair(item.repairCategory || undefined)
   }
 
   return (
     <div className="min-h-screen pb-24">
-      {/* Header with selected car */}
       <div className="px-4 pt-6 pb-2">
         <h1 className="text-[34px] font-bold text-[var(--ink)] mb-1">
           {t('menu.title')}
@@ -59,16 +53,16 @@ export function MainMenuScreen({ car, onSelectCategory, onOpenRepair }: MainMenu
           {MENU_ITEMS.map((item, index) => (
             <button
               key={item.id}
-              onClick={() => handleSelect(item.id)}
+              onClick={() => handleSelect(item)}
               className="bg-[var(--card)] rounded-[13px] shadow-[var(--shadow-card)] p-5 text-left active:scale-[0.97] transition-transform duration-200 spring-up"
               style={{ animationDelay: `${index * 80}ms` }}
             >
               <div className="text-[34px] mb-3">{item.icon}</div>
               <div className="text-[17px] font-semibold text-[var(--ink)] mb-1">
-                {item.id === 'repair' ? item.nameKey : t(item.nameKey)}
+                {item.nameKey.startsWith('menu.') ? t(item.nameKey) : item.nameKey}
               </div>
               <div className="text-[13px] text-[var(--ink-secondary)] leading-[1.3]">
-                {item.id === 'repair' ? item.descKey : t(item.descKey)}
+                {item.descKey.startsWith('menu.') ? t(item.descKey) : item.descKey}
               </div>
             </button>
           ))}
