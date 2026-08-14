@@ -2,27 +2,320 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   iOS Design System + Golden Ratio (φ = 1.618)
+   ============================================ */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.75rem;
+    /* iOS System Colors — Light */
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --ink: #1C1C1E;
+    --ink-secondary: #8E8E93;
+    --accent: #007AFF;
+    --accent-hover: #0056CC;
+    --success: #34C759;
+    --warning: #FF9500;
+    --danger: #FF3B30;
+    --separator: #C6C6C8;
+    --fill: #E5E5EA;
+    --fill-secondary: #F2F2F7;
+
+    /* Semantic */
+    --tab-inactive: #8E8E93;
+    --tab-active: #007AFF;
+    --skeleton: #E5E5EA;
+    --overlay: rgba(0, 0, 0, 0.4);
+
+    /* Golden Ratio spacing scale (base 8px, φ = 1.618) */
+    --space-xs: 5px;
+    --space-sm: 8px;
+    --space-md: 13px;
+    --space-lg: 21px;
+    --space-xl: 34px;
+    --space-2xl: 55px;
+
+    /* Golden Ratio border radius */
+    --radius-sm: 8px;
+    --radius-md: 13px;
+    --radius-lg: 21px;
+    --radius-full: 9999px;
+
+    /* Golden Ratio font sizes */
+    --text-xs: 11px;
+    --text-sm: 13px;
+    --text-base: 17px;
+    --text-lg: 20px;
+    --text-xl: 22px;
+    --text-2xl: 28px;
+    --text-3xl: 34px;
+
+    /* Shadows — subtle, iOS-style */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.12);
+
+    /* Transitions */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-ios: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --duration-fast: 200ms;
+    --duration-normal: 350ms;
+    --duration-slow: 500ms;
+  }
+
+  /* Dark Mode */
+  .dark {
+    --bg: #000000;
+    --card: #1C1C1E;
+    --ink: #FFFFFF;
+    --ink-secondary: #8E8E93;
+    --accent: #0A84FF;
+    --accent-hover: #409CFF;
+    --success: #30D158;
+    --warning: #FF9F0A;
+    --danger: #FF453A;
+    --separator: #38383A;
+    --fill: #2C2C2E;
+    --fill-secondary: #1C1C1E;
+
+    --tab-inactive: #8E8E93;
+    --tab-active: #0A84FF;
+    --skeleton: #2C2C2E;
+    --overlay: rgba(0, 0, 0, 0.6);
+
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  * {
+    @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, 'SF Pro Text', 'SF Pro Display', system-ui,
+      'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: var(--text-base);
+    line-height: 1.47;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior-y: contain;
+  }
+
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
-@layer base {
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
+@layer components {
+  .btn-ios {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 50px;
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    transition: all var(--duration-fast) var(--ease-ios);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .btn-ios:active {
+    transform: scale(0.97);
+    opacity: 0.8;
+  }
+
+  .btn-ios-primary {
+    background-color: var(--accent);
+    color: #FFFFFF;
+  }
+
+  .btn-ios-primary:hover {
+    background-color: var(--accent-hover);
+  }
+
+  .btn-ios-secondary {
+    background-color: var(--fill);
+    color: var(--accent);
+  }
+
+  .card-ios {
+    background-color: var(--card);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-card);
+  }
+
+  .list-row-ios {
+    display: flex;
+    align-items: center;
+    padding: 11px var(--space-md);
+    background-color: var(--card);
+    border-bottom: 0.5px solid var(--separator);
+    min-height: 44px;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-ios);
+  }
+
+  .list-row-ios:active {
+    background-color: var(--fill);
+  }
+
+  .list-row-ios:last-child {
+    border-bottom: none;
+  }
+
+  .section-header-ios {
+    font-size: var(--text-sm);
+    font-weight: 400;
+    color: var(--ink-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: var(--space-lg) var(--space-md) var(--space-sm);
+  }
+
+  .large-title-ios {
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .spring-in {
+    animation: springIn var(--duration-normal) var(--ease-spring) forwards;
+  }
+
+  .spring-up {
+    animation: springUp var(--duration-normal) var(--ease-spring) forwards;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--skeleton) 25%,
+      var(--fill) 50%,
+      var(--skeleton) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+
+  .progress-bar-ios {
+    height: 4px;
+    background-color: var(--fill);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-ios .progress-fill {
+    height: 100%;
+    background-color: var(--accent);
+    border-radius: 2px;
+    transition: width var(--duration-normal) var(--ease-ios);
+  }
+
+  .tab-bar-ios {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    height: 83px;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+    background-color: var(--card);
+    border-top: 0.5px solid var(--separator);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+  }
+
+  .tab-item-ios {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--tab-inactive);
+    transition: color var(--duration-fast) var(--ease-ios);
+    cursor: pointer;
+    padding: 4px 12px;
+  }
+
+  .tab-item-ios.active {
+    color: var(--tab-active);
+  }
+}
+
+@layer utilities {
+  .gap-golden-sm { gap: var(--space-sm); }
+  .gap-golden-md { gap: var(--space-md); }
+  .gap-golden-lg { gap: var(--space-lg); }
+  .gap-golden-xl { gap: var(--space-xl); }
+
+  .p-golden-sm { padding: var(--space-sm); }
+  .p-golden-md { padding: var(--space-md); }
+  .p-golden-lg { padding: var(--space-lg); }
+  .p-golden-xl { padding: var(--space-xl); }
+
+  .px-golden-md { padding-left: var(--space-md); padding-right: var(--space-md); }
+  .py-golden-md { padding-top: var(--space-md); padding-bottom: var(--space-md); }
+  .px-golden-lg { padding-left: var(--space-lg); padding-right: var(--space-lg); }
+
+  .text-ios-body { font-size: var(--text-base); }
+  .text-ios-caption { font-size: var(--text-sm); color: var(--ink-secondary); }
+  .text-ios-title { font-size: var(--text-xl); font-weight: 600; }
+  .text-ios-large-title { font-size: var(--text-3xl); font-weight: 700; letter-spacing: -0.02em; }
+}
+
+/* Animations */
+
+@keyframes springIn {
+  0% { opacity: 0; transform: scale(0.9) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes springUp {
+  0% { opacity: 0; transform: translateY(30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes slideInRight {
+  0% { opacity: 0; transform: translateX(100%); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes checkmark {
+  0% { stroke-dashoffset: 50; opacity: 0; }
+  50% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spring-in, .spring-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .skeleton { animation: none; }
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
