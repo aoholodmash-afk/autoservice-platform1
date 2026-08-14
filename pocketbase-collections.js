@@ -1,0 +1,155 @@
+// PocketBase Collections Setup
+// Запустить в PocketBase Dashboard: http://api.v3x3.ru/_/
+// Или через API после создания admin пользователя
+
+const collections = [
+  {
+    name: 'tenants',
+    type: 'base',
+    schema: [
+      { name: 'slug', type: 'text', required: true, unique: true },
+      { name: 'name', type: 'text', required: true },
+      { name: 'address', type: 'text', required: true },
+      { name: 'phone', type: 'text', required: true },
+      { name: 'email', type: 'email' },
+      { name: 'description', type: 'text' },
+      { name: 'logo', type: 'file', options: { maxSelect: 1, maxSize: 5242880 } },
+      { name: 'work_hours', type: 'text', defaultValue: '09:00–20:00' },
+      { name: 'boxes', type: 'number', defaultValue: 2 },
+      { name: 'service_categories', type: 'json' },
+      { name: 'tariff', type: 'select', options: { values: ['start', 'business', 'pro'] }, defaultValue: 'start' },
+      { name: 'is_active', type: 'bool', defaultValue: true },
+      { name: 'city', type: 'text' },
+    ],
+  },
+  {
+    name: 'admin_users',
+    type: 'auth',
+    schema: [
+      { name: 'tenant_id', type: 'text' },
+      { name: 'name', type: 'text', required: true },
+      { name: 'login', type: 'text', required: true, unique: true },
+      { name: 'role', type: 'select', options: { values: ['super_admin', 'admin', 'mechanic'] }, defaultValue: 'admin' },
+      { name: 'is_active', type: 'bool', defaultValue: true },
+    ],
+  },
+  {
+    name: 'clients',
+    type: 'auth',
+    schema: [
+      { name: 'phone', type: 'text', required: true, unique: true },
+      { name: 'name', type: 'text' },
+      { name: 'email', type: 'email' },
+      { name: 'telegram_chat_id', type: 'text' },
+      { name: 'verified', type: 'bool', defaultValue: false },
+    ],
+  },
+  {
+    name: 'vehicles',
+    type: 'base',
+    schema: [
+      { name: 'client_id', type: 'text', required: true },
+      { name: 'brand', type: 'text', required: true },
+      { name: 'model', type: 'text', required: true },
+      { name: 'year', type: 'number', required: true },
+      { name: 'engine', type: 'text' },
+      { name: 'plate', type: 'text' },
+      { name: 'vin', type: 'text' },
+      { name: 'mileage', type: 'number' },
+    ],
+  },
+  {
+    name: 'services',
+    type: 'base',
+    schema: [
+      { name: 'tenant_id', type: 'text', required: true },
+      { name: 'name', type: 'text', required: true },
+      { name: 'category', type: 'text', required: true },
+      { name: 'description', type: 'text' },
+      { name: 'labor_price', type: 'number', defaultValue: 0 },
+      { name: 'duration', type: 'number', defaultValue: 30 },
+      { name: 'is_active', type: 'bool', defaultValue: true },
+    ],
+  },
+  {
+    name: 'bookings',
+    type: 'base',
+    schema: [
+      { name: 'tenant_id', type: 'text', required: true },
+      { name: 'client_id', type: 'text' },
+      { name: 'vehicle_id', type: 'text' },
+      { name: 'client_name', type: 'text', required: true },
+      { name: 'client_phone', type: 'text', required: true },
+      { name: 'service_name', type: 'text', required: true },
+      { name: 'date', type: 'text', required: true },
+      { name: 'time', type: 'text' },
+      { name: 'status', type: 'select', options: { values: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'] }, defaultValue: 'pending' },
+      { name: 'notes', type: 'text' },
+    ],
+  },
+  {
+    name: 'orders',
+    type: 'base',
+    schema: [
+      { name: 'tenant_id', type: 'text', required: true },
+      { name: 'client_id', type: 'text' },
+      { name: 'vehicle_id', type: 'text' },
+      { name: 'order_number', type: 'text', required: true },
+      { name: 'client_name', type: 'text', required: true },
+      { name: 'client_phone', type: 'text', required: true },
+      { name: 'vehicle_name', type: 'text' },
+      { name: 'services', type: 'json' },
+      { name: 'parts', type: 'json' },
+      { name: 'labor_total', type: 'number', defaultValue: 0 },
+      { name: 'parts_total', type: 'number', defaultValue: 0 },
+      { name: 'total', type: 'number', defaultValue: 0 },
+      { name: 'status', type: 'select', options: { values: ['pending', 'in_progress', 'completed', 'cancelled'] }, defaultValue: 'pending' },
+      { name: 'mechanic_id', type: 'text' },
+      { name: 'notes', type: 'text' },
+      { name: 'completed_at', type: 'text' },
+    ],
+  },
+  {
+    name: 'reviews',
+    type: 'base',
+    schema: [
+      { name: 'tenant_id', type: 'text', required: true },
+      { name: 'client_id', type: 'text' },
+      { name: 'order_id', type: 'text' },
+      { name: 'client_name', type: 'text', required: true },
+      { name: 'rating', type: 'number', required: true },
+      { name: 'text', type: 'text' },
+    ],
+  },
+  {
+    name: 'stock_items',
+    type: 'base',
+    schema: [
+      { name: 'tenant_id', type: 'text', required: true },
+      { name: 'name', type: 'text', required: true },
+      { name: 'article', type: 'text' },
+      { name: 'brand', type: 'text' },
+      { name: 'category', type: 'text' },
+      { name: 'quantity', type: 'number', defaultValue: 0 },
+      { name: 'min_quantity', type: 'number', defaultValue: 1 },
+      { name: 'purchase_price', type: 'number', defaultValue: 0 },
+      { name: 'sell_price', type: 'number', defaultValue: 0 },
+      { name: 'supplier', type: 'text' },
+    ],
+  },
+  {
+    name: 'invite_tokens',
+    type: 'base',
+    schema: [
+      { name: 'token', type: 'text', required: true, unique: true },
+      { name: 'tenant_id', type: 'text' },
+      { name: 'role', type: 'select', options: { values: ['admin', 'mechanic'] }, defaultValue: 'admin' },
+      { name: 'is_used', type: 'bool', defaultValue: false },
+      { name: 'used_by', type: 'text' },
+    ],
+  },
+]
+
+console.log('📋 Коллекции для создания в PocketBase:')
+console.log(JSON.stringify(collections, null, 2))
+console.log('\n✅ Создайте эти коллекции через Dashboard: http://api.v3x3.ru/_/')
