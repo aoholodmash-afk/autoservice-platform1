@@ -16,6 +16,8 @@ import { TOCategoryScreen } from '@/components/screens/TOCategoryScreen'
 import { ServiceDetailScreen } from '@/components/screens/ServiceDetailScreen'
 import { BookingScreen } from '@/components/screens/BookingScreen'
 import { BookingConfirmScreen } from '@/components/screens/BookingConfirmScreen'
+import { RepairScreen } from '@/components/screens/RepairScreen'
+import { TrackingScreen } from '@/components/screens/TrackingScreen'
 
 // Tab bar
 import { TabBar, HomeIcon, CarIcon, CalendarIcon, ProfileIcon } from '@/components/ui/TabBar'
@@ -29,6 +31,8 @@ type Screen =
   | 'service-detail'
   | 'booking'
   | 'booking-confirm'
+  | 'repair'
+  | 'tracking'
   | 'profile'
 
 type Tab = 'home' | 'cars' | 'bookings' | 'profile'
@@ -215,6 +219,8 @@ export default function HomePage() {
           <MainMenuScreen
             car={selectedCar}
             onSelectCategory={handleSelectCategory}
+            onOpenRepair={() => setScreen('repair')}
+            onOpenTracking={() => setScreen('tracking')}
           />
         )}
 
@@ -222,6 +228,19 @@ export default function HomePage() {
           <TOCategoryScreen
             category={selectedCategory as any}
             onSelectService={handleSelectService}
+            onBack={() => setScreen('main-menu')}
+          />
+        )}
+
+        {screen === 'repair' && selectedCar && (
+          <RepairScreen
+            car={selectedCar}
+            onBack={() => setScreen('main-menu')}
+          />
+        )}
+
+        {screen === 'tracking' && (
+          <TrackingScreen
             onBack={() => setScreen('main-menu')}
           />
         )}
