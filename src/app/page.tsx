@@ -13,6 +13,16 @@ import { MyCarsScreen } from '@/components/screens/MyCarsScreen'
 import { MainMenuScreen } from '@/components/screens/MainMenuScreen'
 import { RepairScreen } from '@/components/screens/RepairScreen'
 import { TrackingScreen } from '@/components/screens/TrackingScreen'
+import { TOCalculatorScreen } from '@/components/screens/TOCalculatorScreen'
+import { ReviewScreen } from '@/components/screens/ReviewScreen'
+import { InspectionReport } from '@/components/screens/InspectionReport'
+import { LoyaltyScreen } from '@/components/screens/LoyaltyScreen'
+import { ServiceHistory } from '@/components/screens/ServiceHistory'
+import { ChatScreen } from '@/components/screens/ChatScreen'
+import { ReferralScreen } from '@/components/screens/ReferralScreen'
+import { WarrantyScreen } from '@/components/screens/WarrantyScreen'
+import { LocationSelect } from '@/components/screens/LocationSelect'
+import { PaymentScreen } from '@/components/screens/PaymentScreen'
 
 // Tab bar
 import { TabBar, HomeIcon, CarIcon, CalendarIcon, ProfileIcon } from '@/components/ui/TabBar'
@@ -24,6 +34,16 @@ type Screen =
   | 'main-menu'
   | 'repair'
   | 'tracking'
+  | 'calculator'
+  | 'reviews'
+  | 'checklist'
+  | 'loyalty'
+  | 'history'
+  | 'chat'
+  | 'referral'
+  | 'warranty'
+  | 'location'
+  | 'payment'
 
 type Tab = 'home' | 'cars' | 'bookings' | 'profile'
 
@@ -96,24 +116,13 @@ export default function HomePage() {
     setActiveTab(tab as Tab)
     switch (tab) {
       case 'home':
-        if (activeCar) {
-          setScreen('main-menu')
-        } else if (cars.length > 0) {
-          setActiveCar(cars[0].id)
-          setScreen('main-menu')
-        } else {
-          setScreen('welcome')
-        }
+        if (activeCar) setScreen('main-menu')
+        else if (cars.length > 0) { setActiveCar(cars[0].id); setScreen('main-menu') }
+        else setScreen('welcome')
         break
-      case 'cars':
-        setScreen('my-cars')
-        break
-      case 'bookings':
-        setScreen('tracking')
-        break
-      case 'profile':
-        setScreen('my-cars')
-        break
+      case 'cars': setScreen('my-cars'); break
+      case 'bookings': setScreen('tracking'); break
+      case 'profile': setScreen('my-cars'); break
     }
   }
 
@@ -138,11 +147,8 @@ export default function HomePage() {
     <div className="mx-auto max-w-[430px] min-h-screen bg-[var(--bg)] relative">
       <div className={showTabBar ? 'pb-24' : ''}>
         {screen === 'welcome' && (
-          <WelcomeScreen
-            onAddCar={() => handleAddCar('my-cars')}
-            hasExistingCars={cars.length > 0}
-            onGoToCars={() => { setScreen('my-cars'); setActiveTab('cars') }}
-          />
+          <WelcomeScreen onAddCar={() => handleAddCar('my-cars')} hasExistingCars={cars.length > 0}
+            onGoToCars={() => { setScreen('my-cars'); setActiveTab('cars') }} />
         )}
 
         {screen === 'wizard' && (
@@ -150,32 +156,54 @@ export default function HomePage() {
         )}
 
         {screen === 'my-cars' && (
-          <MyCarsScreen
-            onSelectCar={handleSelectCar}
-            onAddCar={() => handleAddCar('my-cars')}
-          />
+          <MyCarsScreen onSelectCar={handleSelectCar} onAddCar={() => handleAddCar('my-cars')} />
         )}
 
         {screen === 'main-menu' && activeCar && (
           <MainMenuScreen
             car={activeCar}
             onOpenRepair={handleOpenRepair}
+            onOpenCalculator={() => setScreen('calculator')}
+            onOpenReviews={() => setScreen('reviews')}
+            onOpenChecklist={() => setScreen('checklist')}
+            onOpenLoyalty={() => setScreen('loyalty')}
+            onOpenHistory={() => setScreen('history')}
+            onOpenChat={() => setScreen('chat')}
+            onOpenReferral={() => setScreen('referral')}
+            onOpenWarranty={() => setScreen('warranty')}
+            onOpenLocation={() => setScreen('location')}
           />
         )}
 
         {screen === 'repair' && (
-          <RepairScreen
-            cars={cars}
-            activeCar={activeCar}
-            onSelectCar={(id) => setActiveCar(id)}
-            onAddCar={() => handleAddCar('repair')}
-            onBack={handleGoHome}
-            initialCategory={repairCategory}
-          />
+          <RepairScreen cars={cars} activeCar={activeCar} onSelectCar={(id) => setActiveCar(id)}
+            onAddCar={() => handleAddCar('repair')} onBack={handleGoHome} initialCategory={repairCategory} />
         )}
 
-        {screen === 'tracking' && (
-          <TrackingScreen onBack={handleGoHome} />
+        {screen === 'tracking' && <TrackingScreen onBack={handleGoHome} />}
+
+        {screen === 'calculator' && activeCar && (
+          <TOCalculatorScreen car={activeCar} onBack={handleGoHome} onBook={(items) => { setScreen('repair') }} />
+        )}
+
+        {screen === 'reviews' && <ReviewScreen onBack={handleGoHome} />}
+
+        {screen === 'checklist' && <InspectionReport onBack={handleGoHome} />}
+
+        {screen === 'loyalty' && <LoyaltyScreen onBack={handleGoHome} />}
+
+        {screen === 'history' && <ServiceHistory onBack={handleGoHome} />}
+
+        {screen === 'chat' && <ChatScreen onBack={handleGoHome} />}
+
+        {screen === 'referral' && <ReferralScreen onBack={handleGoHome} />}
+
+        {screen === 'warranty' && <WarrantyScreen onBack={handleGoHome} />}
+
+        {screen === 'location' && <LocationSelect onBack={handleGoHome} onSelect={(loc) => handleGoHome()} />}
+
+        {screen === 'payment' && activeCar && (
+          <PaymentScreen amount={500} serviceName="Предоплата" onConfirm={handleGoHome} onBack={handleGoHome} />
         )}
       </div>
 
