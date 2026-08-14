@@ -1083,6 +1083,8 @@ function BookingsSection() {
 function ClientsSection() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'active' | 'vip' | 'inactive'>('all')
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [clientTab, setClientTab] = useState<'info' | 'cars' | 'orders'>('info')
 
   const filtered = MOCK_CLIENTS.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
@@ -1096,6 +1098,245 @@ function ClientsSection() {
     inactive: { label: 'Неактивный', color: 'bg-[#8E8E93] bg-opacity-15 text-[#8E8E93]' },
   }
 
+  // Client detail view
+  if (selectedClient) {
+    const clientOrders = selectedClient.orders || []
+    const completedOrders = clientOrders.filter(o => o.status === 'completed')
+    const avgCheck = completedOrders.length > 0 ? completedOrders.reduce((s, o) => s + o.total, 0) / completedOrders.length : 0
+
+    return (
+      <div className="space-y-4">
+        {/* Back button + client name */}
+        <div className="flex items-center gap-3">
+          <button onClick={() => setSelectedClient(null)} className="text-[#007AFF] text-[15px] font-medium flex items-center gap-1">
+            <svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9L9 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Назад
+          </button>
+          <span className="text-[13px] text-[#8E8E93]">|</span>
+          <span className="text-[17px] font-semibold text-[#1C1C1E]">{selectedClient.name}</span>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusConfig[selectedClient.status].color}`}>
+            {statusConfig[selectedClient.status].label}
+          </span>
+        </div>
+
+        {/* Client header card */}
+        <div className="bg-white rounded-[13px] shadow-sm p-5">
+          <div className="flex items-start gap-4">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-[24px] font-bold flex-shrink-0 ${
+              selectedClient.status === 'vip' ? 'bg-[#FF9500] text-white' : 'bg-[#007AFF] bg-opacity-15 text-[#007AFF]'
+            }`}>
+              {selectedClient.name.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[22px] font-bold text-[#1C1C1E]">{selectedClient.name}</h3>
+              <div className="flex items-center gap-4 mt-2 flex-wrap">
+                <a href={`tel:${selectedClient.phone}`} className="flex items-center gap-1 text-[14px] text-[#007AFF]">
+                  📞 {selectedClient.phone}
+                </a>
+                {selectedClient.email && (
+                  <a href={`mailto:${selectedClient.email}`} className="flex items-center gap-1 text-[14px] text-[#007AFF]">
+                    ✉️ {selectedClient.email}
+                  </a>
+                )}
+              </div>
+              {selectedClient.address && (
+                <p className="text-[13px] text-[#8E8E93] mt-1">📍 {selectedClient.address}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-3">
+          <div className="bg-white rounded-[13px] p-4 shadow-sm text-center">
+            <div className="text-[22px] font-bold text-[#007AFF]">{selectedClient.totalOrders}</div>
+            <div className="text-[11px] text-[#8E8E93]">Заказов</div>
+          </div>
+          <div className="bg-white rounded-[13px] p-4 shadow-sm text-center">
+            <div className="text-[22px] font-bold text-[#34C759]">{(selectedClient.totalSpent / 1000).toFixed(0)}к ₽</div>
+            <div className="text-[11px] text-[#8E8E93]">Потрачено</div>
+          </div>
+          <div className="bg-white rounded-[13px] p-4 shadow-sm text-center">
+            <div className="text-[22px] font-bold text-[#1C1C1E]">{selectedClient.cars.length}</div>
+            <div className="text-[11px] text-[#8E8E93]">Автомобилей</div>
+          </div>
+          <div className="bg-white rounded-[13px] p-4 shadow-sm text-center">
+            <div className="text-[22px] font-bold text-[#FF9500]">{avgCheck > 0 ? (avgCheck / 1000).toFixed(1) : 0}к ₽</div>
+            <div className="text-[11px] text-[#8E8E93]">Ср. чек</div>
+          </div>
+        </div>
+
+        {/* Notes */}
+        {selectedClient.notes && (
+          <div className="bg-[#FF9500] bg-opacity-10 rounded-[13px] p-4">
+            <p className="text-[13px] text-[#8E8E93] mb-1 font-medium">Примечание:</p>
+            <p className="text-[14px] text-[#1C1C1E]">{selectedClient.notes}</p>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-1 bg-[#F2F2F7] p-1 rounded-[10px]">
+          {([
+            { id: 'info' as const, label: 'Контакты', icon: '👤' },
+            { id: 'cars' as const, label: 'Автомобили', icon: '🚗' },
+            { id: 'orders' as const, label: 'Заказы', icon: '📋' },
+          ]).map(t => (
+            <button key={t.id} onClick={() => setClientTab(t.id)}
+              className={`flex-1 h-[36px] rounded-[8px] text-[13px] font-medium transition-colors ${
+                clientTab === t.id ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93]'
+              }`}
+            >{t.icon} {t.label}</button>
+          ))}
+        </div>
+
+        {/* TAB: Contact Info */}
+        {clientTab === 'info' && (
+          <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+            <div className="divide-y divide-[#E5E5EA]">
+              <div className="px-5 py-3 flex items-center justify-between">
+                <span className="text-[13px] text-[#8E8E93]">Телефон</span>
+                <a href={`tel:${selectedClient.phone}`} className="text-[15px] text-[#007AFF] font-medium">{selectedClient.phone}</a>
+              </div>
+              {selectedClient.email && (
+                <div className="px-5 py-3 flex items-center justify-between">
+                  <span className="text-[13px] text-[#8E8E93]">Email</span>
+                  <a href={`mailto:${selectedClient.email}`} className="text-[15px] text-[#007AFF] font-medium">{selectedClient.email}</a>
+                </div>
+              )}
+              {selectedClient.address && (
+                <div className="px-5 py-3 flex items-center justify-between">
+                  <span className="text-[13px] text-[#8E8E93]">Адрес</span>
+                  <span className="text-[15px] text-[#1C1C1E]">{selectedClient.address}</span>
+                </div>
+              )}
+              {selectedClient.birthday && (
+                <div className="px-5 py-3 flex items-center justify-between">
+                  <span className="text-[13px] text-[#8E8E93]">День рождения</span>
+                  <span className="text-[15px] text-[#1C1C1E]">{new Date(selectedClient.birthday).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </div>
+              )}
+              <div className="px-5 py-3 flex items-center justify-between">
+                <span className="text-[13px] text-[#8E8E93]">Последний визит</span>
+                <span className="text-[15px] text-[#1C1C1E]">{new Date(selectedClient.lastVisit).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </div>
+              <div className="px-5 py-3 flex items-center justify-between">
+                <span className="text-[13px] text-[#8E8E93]">Статус</span>
+                <span className={`px-2 py-0.5 rounded-full text-[12px] font-medium ${statusConfig[selectedClient.status].color}`}>
+                  {statusConfig[selectedClient.status].label}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: Cars */}
+        {clientTab === 'cars' && (
+          <div className="space-y-3">
+            {selectedClient.cars.map((car, i) => (
+              <div key={i} className="bg-white rounded-[13px] shadow-sm p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-[13px] bg-[#007AFF] bg-opacity-10 flex items-center justify-center flex-shrink-0">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2">
+                      <path d="M5 17h14M5 17a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2"/>
+                      <circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-[17px] font-semibold text-[#1C1C1E]">{car.brand} {car.model}</h4>
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <div>
+                        <span className="text-[11px] text-[#8E8E93]">Год</span>
+                        <p className="text-[14px] text-[#1C1C1E]">{car.year}</p>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-[#8E8E93]">Госномер</span>
+                        <p className="text-[14px] font-medium text-[#1C1C1E]">{car.plate}</p>
+                      </div>
+                      {car.color && (
+                        <div>
+                          <span className="text-[11px] text-[#8E8E93]">Цвет</span>
+                          <p className="text-[14px] text-[#1C1C1E]">{car.color}</p>
+                        </div>
+                      )}
+                      {car.mileage && (
+                        <div>
+                          <span className="text-[11px] text-[#8E8E93]">Пробег</span>
+                          <p className="text-[14px] text-[#1C1C1E]">{car.mileage.toLocaleString('ru-RU')} км</p>
+                        </div>
+                      )}
+                      {car.vin && (
+                        <div className="col-span-2">
+                          <span className="text-[11px] text-[#8E8E93]">VIN</span>
+                          <p className="text-[13px] font-mono text-[#8E8E93]">{car.vin}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* TAB: Orders */}
+        {clientTab === 'orders' && (
+          <div className="space-y-3">
+            {clientOrders.length === 0 ? (
+              <div className="bg-white rounded-[13px] shadow-sm p-8 text-center">
+                <div className="text-[44px] mb-3">📋</div>
+                <p className="text-[15px] text-[#8E8E93]">Нет заказов</p>
+              </div>
+            ) : (
+              clientOrders.map(order => {
+                const statusColor = order.status === 'completed' ? 'bg-[#34C759] bg-opacity-15 text-[#34C759]' :
+                  order.status === 'in_progress' ? 'bg-[#007AFF] bg-opacity-15 text-[#007AFF]' : 'bg-[#FF3B30] bg-opacity-15 text-[#FF3B30]'
+                const statusLabel = order.status === 'completed' ? 'Выполнен' : order.status === 'in_progress' ? 'В работе' : 'Отменён'
+                return (
+                  <div key={order.id} className="bg-white rounded-[13px] shadow-sm overflow-hidden">
+                    <div className="px-5 py-3 border-b border-[#E5E5EA] flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[15px] font-bold text-[#007AFF]">{order.id}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusColor}`}>{statusLabel}</span>
+                      </div>
+                      <span className="text-[13px] text-[#8E8E93]">{new Date(order.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                    <div className="px-5 py-3">
+                      <div className="text-[13px] text-[#8E8E93] mb-2">{order.car}</div>
+                      <div className="mb-3">
+                        {order.services.map((s, si) => (
+                          <span key={si} className="inline-block px-2 py-0.5 bg-[#F2F2F7] rounded text-[12px] text-[#1C1C1E] mr-1 mb-1">{s}</span>
+                        ))}
+                      </div>
+                      {order.parts.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-[11px] text-[#8E8E93] mb-1">Запчасти:</p>
+                          {order.parts.map((p, pi) => (
+                            <p key={pi} className="text-[12px] text-[#8E8E93] ml-2">• {p}</p>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between pt-2 border-t border-[#E5E5EA]">
+                        <div className="text-[12px] text-[#8E8E93]">
+                          {order.mechanic && `Мастер: ${order.mechanic}`}
+                        </div>
+                        <div className="flex items-center gap-4">
+                          {order.laborPrice > 0 && <span className="text-[12px] text-[#8E8E93]">Работа: {order.laborPrice.toLocaleString('ru-RU')} ₽</span>}
+                          {order.partsPrice > 0 && <span className="text-[12px] text-[#8E8E93]">Запчасти: {order.partsPrice.toLocaleString('ru-RU')} ₽</span>}
+                          <span className="text-[16px] font-bold text-[#1C1C1E]">{order.total.toLocaleString('ru-RU')} ₽</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Client list view
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -1128,48 +1369,33 @@ function ClientsSection() {
       </div>
 
       {/* Clients list */}
-      <div className="bg-white rounded-[13px] shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#F2F2F7]">
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-[#8E8E93]">Клиент</th>
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-[#8E8E93]">Авто</th>
-                <th className="px-4 py-3 text-center text-[13px] font-medium text-[#8E8E93]">Заказов</th>
-                <th className="px-4 py-3 text-right text-[13px] font-medium text-[#8E8E93]">Сумма</th>
-                <th className="px-4 py-3 text-center text-[13px] font-medium text-[#8E8E93]">Последний визит</th>
-                <th className="px-4 py-3 text-center text-[13px] font-medium text-[#8E8E93]">Статус</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E5E5EA]">
-              {filtered.map(client => (
-                <tr key={client.id} className="hover:bg-[#F2F2F7] transition-colors cursor-pointer">
-                  <td className="px-4 py-3">
-                    <div className="text-[15px] font-medium text-[#1C1C1E]">{client.name}</div>
-                    <div className="text-[11px] text-[#8E8E93]">{client.phone}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {client.cars.map((car, i) => (
-                      <div key={i} className="text-[13px] text-[#1C1C1E]">
-                        {car.brand} {car.model} {car.year} • {car.plate}
-                      </div>
-                    ))}
-                  </td>
-                  <td className="px-4 py-3 text-center text-[15px] font-semibold text-[#1C1C1E]">{client.totalOrders}</td>
-                  <td className="px-4 py-3 text-right text-[15px] font-semibold text-[#1C1C1E]">{client.totalSpent.toLocaleString('ru-RU')} ₽</td>
-                  <td className="px-4 py-3 text-center text-[13px] text-[#8E8E93]">
-                    {new Date(client.lastVisit).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusConfig[client.status].color}`}>
-                      {statusConfig[client.status].label}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="space-y-3">
+        {filtered.map(client => (
+          <button
+            key={client.id}
+            onClick={() => { setSelectedClient(client); setClientTab('info') }}
+            className="w-full bg-white rounded-[13px] shadow-sm p-4 flex items-center gap-4 text-left hover:shadow-md transition-shadow"
+          >
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-[18px] font-bold flex-shrink-0 ${
+              client.status === 'vip' ? 'bg-[#FF9500] text-white' : 'bg-[#007AFF] bg-opacity-15 text-[#007AFF]'
+            }`}>
+              {client.name.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[16px] font-semibold text-[#1C1C1E]">{client.name}</span>
+                {client.status === 'vip' && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#FF9500] text-white">VIP</span>}
+              </div>
+              <div className="text-[13px] text-[#8E8E93] mt-0.5">{client.phone}</div>
+              <div className="text-[12px] text-[#8E8E93] mt-1">
+                {client.cars.map(c => `${c.brand} ${c.model}`).join(', ')} • {client.totalOrders} заказов • {client.totalSpent.toLocaleString('ru-RU')} ₽
+              </div>
+            </div>
+            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="opacity-30 flex-shrink-0">
+              <path d="M1 1L7 7L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        ))}
       </div>
     </div>
   )
