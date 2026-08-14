@@ -75,6 +75,11 @@ function SuperLoginPage({ onLogin }: { onLogin: () => void }) {
   const [code, setCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
 
+  const handleLogin = () => {
+    loginSuperAdmin(phone, code)
+    onLogin()
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)' }}>
       <div className="absolute inset-0">
@@ -100,7 +105,7 @@ function SuperLoginPage({ onLogin }: { onLogin: () => void }) {
             <>
               <input value={code} onChange={e => setCode(e.target.value)} placeholder="Код" maxLength={4}
                 className="w-full h-[44px] px-4 bg-white/10 rounded-[13px] text-white text-center text-[20px] tracking-[0.5em] outline-none border border-white/10 focus:border-[#5856D6]" />
-              <button onClick={onLogin} disabled={code.length !== 4}
+              <button onClick={handleLogin} disabled={code.length !== 4}
                 className="w-full h-[48px] text-white rounded-[13px] font-semibold disabled:opacity-40"
                 style={{ background: 'linear-gradient(135deg, #5856D6, #007AFF)' }}>
                 Войти
