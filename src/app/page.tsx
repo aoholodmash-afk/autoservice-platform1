@@ -126,6 +126,27 @@ export default function HomePage() {
             Панель управления →
           </a>
         </div>
+
+        {/* Footer with legal info */}
+        <footer className="mt-12 pb-8 text-center space-y-2">
+          <div className="h-[1px] bg-[var(--separator)] mb-6" />
+          <p className="text-[12px] text-[var(--ink-secondary)]">
+            © 2026 AutoService. Все права защищены.
+          </p>
+          <p className="text-[12px] text-[var(--ink-secondary)]">
+            Хатуаев Заур Хасанович • Самозанятый
+          </p>
+          <p className="text-[12px] text-[var(--ink-secondary)]">
+            <a href="tel:+79889198444" className="text-[var(--accent)]">+7 (988) 919-84-44</a>
+            {' • '}
+            <a href="mailto:ai3ayp@yanex.ru" className="text-[var(--accent)]">ai3ayp@yanex.ru</a>
+          </p>
+          <div className="flex justify-center gap-4 mt-3">
+            <a href="/privacy" className="text-[12px] text-[var(--accent)]">Политика конфиденциальности</a>
+            <span className="text-[12px] text-[var(--ink-secondary)]">•</span>
+            <a href="/privacy" className="text-[12px] text-[var(--accent)]">Согласие на обработку данных</a>
+          </div>
+        </footer>
       </div>
     </div>
   )

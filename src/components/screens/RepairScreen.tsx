@@ -480,6 +480,15 @@ export function RepairScreen({ cars, activeCar, onSelectCar, onAddCar, onBack, o
                 className="w-full px-4 py-3 bg-[var(--card)] rounded-[13px] text-[16px] border border-[var(--separator)] focus:border-[var(--accent)] outline-none placeholder-[var(--ink-secondary)] resize-none" />
             </div>
 
+            {/* Consent checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" className="mt-1 w-4 h-4 accent-[var(--accent)]" defaultChecked />
+              <span className="text-[13px] text-[var(--ink-secondary)] leading-[1.4]">
+                Я соглашаюсь на обработку персональных данных в соответствии с{' '}
+                <a href="/privacy" className="text-[var(--accent)] underline" target="_blank">политикой конфиденциальности</a>
+              </span>
+            </label>
+
             <button onClick={handleBookingSubmit} disabled={!bookingName || !bookingPhone || !bookingDate || bookingLoading}
               className="w-full h-[50px] bg-[#34C759] text-white rounded-[13px] font-semibold text-[17px] disabled:opacity-40 active:scale-[0.97] transition-transform">
               {bookingLoading ? 'Отправка...' : 'Записаться'}
