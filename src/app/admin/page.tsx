@@ -67,16 +67,16 @@ export default function AdminPage() {
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-[#1C1C1E] text-white
+        fixed lg:static inset-y-0 left-0 z-50 w-[260px] text-white
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+      `} style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}>
         <div className="p-5 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#007AFF] flex items-center justify-center text-xl">🔧</div>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)', boxShadow: '0 4px 15px rgba(0, 122, 255, 0.3)' }}>🔧</div>
             <div>
               <h1 className="font-bold text-[17px]">AutoService</h1>
-              <p className="text-[11px] text-white/50">Панель управления</p>
+              <p className="text-[11px] text-white/40">Панель управления</p>
             </div>
           </div>
         </div>
@@ -88,12 +88,13 @@ export default function AdminPage() {
               onClick={() => { setSection(item.id); setSidebarOpen(false) }}
               className={`
                 w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] font-medium
-                transition-colors duration-150
+                transition-all duration-200
                 ${section === item.id
-                  ? 'bg-[#007AFF] text-white'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  ? 'text-white shadow-[0_0_15px_rgba(0,122,255,0.3)]'
+                  : 'text-white/60 hover:bg-white/10 hover:text-white'
                 }
               `}
+              style={section === item.id ? { background: 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)' } : {}}
             >
               <span className="text-[18px]">{item.icon}</span>
               {item.label}
@@ -104,7 +105,7 @@ export default function AdminPage() {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <a
             href="/"
-            className="flex items-center gap-2 text-white/50 text-[13px] hover:text-white transition-colors"
+            className="flex items-center gap-2 text-white/40 text-[13px] hover:text-white transition-colors"
           >
             ← Вернуться на сайт
           </a>
@@ -113,8 +114,8 @@ export default function AdminPage() {
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
-        {/* Top bar */}
-        <header className="bg-white border-b border-[#C6C6C8] sticky top-0 z-30">
+        {/* Top bar with glass effect */}
+        <header className="sticky top-0 z-30 border-b border-[#C6C6C8]" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
           <div className="flex items-center justify-between px-4 h-[52px]">
             <div className="flex items-center gap-2 min-w-0">
               <button
@@ -152,18 +153,20 @@ export default function AdminPage() {
         </main>
       </div>
 
-      {/* Mobile bottom tab bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E5EA] z-40 flex items-center justify-around h-[60px] pb-[env(safe-area-inset-bottom)]">
+      {/* Mobile bottom tab bar with glass effect */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around h-[60px] pb-[env(safe-area-inset-bottom)] border-t border-[#E5E5EA]"
+        style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
         {mobileTabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setSection(tab.id)}
-            className={`flex flex-col items-center gap-0.5 px-2 py-1 min-w-[48px] ${
-              section === tab.id ? 'text-[#007AFF]' : 'text-[#8E8E93]'
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 min-w-[48px] transition-all duration-200 ${
+              section === tab.id ? 'text-[#007AFF] scale-110' : 'text-[#8E8E93]'
             }`}
           >
             <span className="text-[20px]">{tab.icon}</span>
-            <span className="text-[10px] font-medium">{tab.label}</span>
+            <span className={`text-[10px] ${section === tab.id ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
+            {section === tab.id && <div className="w-1 h-1 rounded-full bg-[#007AFF] mt-0.5" />}
           </button>
         ))}
       </nav>
@@ -179,24 +182,32 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
   const [codeSent, setCodeSent] = useState(false)
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[#F2F2F7]">
-      <div className="w-full max-w-[380px] bg-white rounded-[13px] shadow-sm p-8">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #000000 0%, #1C1C1E 50%, #2C2C2E 100%)' }}>
+      {/* Animated background elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] rounded-full bg-[#007AFF] opacity-10 blur-[100px] animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-[200px] h-[200px] rounded-full bg-[#5856D6] opacity-10 blur-[80px] animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
+
+      {/* Premium glass card */}
+      <div className="relative w-full max-w-[380px] bg-white/10 backdrop-blur-xl rounded-[21px] p-8 border border-white/20 spring-in" style={{ boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3)' }}>
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#007AFF] rounded-[13px] flex items-center justify-center mx-auto mb-4 text-3xl">🔧</div>
-          <h1 className="text-[22px] font-bold text-[#1C1C1E]">AutoService Admin</h1>
-          <p className="text-[15px] text-[#8E8E93] mt-1">Вход для персонала</p>
+          <div className="w-20 h-20 rounded-[21px] flex items-center justify-center mx-auto mb-5 text-4xl" style={{ background: 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)', boxShadow: '0 10px 30px rgba(0, 122, 255, 0.3)' }}>🔧</div>
+          <h1 className="text-[26px] font-bold text-white">AutoService</h1>
+          <p className="text-[15px] text-white/60 mt-1">Панель управления</p>
         </div>
         <div className="space-y-4">
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Телефон"
-            className="w-full h-[44px] px-4 bg-[#F2F2F7] rounded-[10px] text-[17px] text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30"
+            className="w-full h-[48px] px-4 bg-white/10 rounded-[13px] text-[17px] text-white placeholder-white/40 outline-none border border-white/10 focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30 transition-all"
           />
           {phone && !codeSent && (
             <button
               onClick={() => setCodeSent(true)}
-              className="w-full h-[50px] bg-[#007AFF] text-white rounded-[13px] font-semibold text-[17px]"
+              className="w-full h-[50px] text-white rounded-[13px] font-semibold text-[17px] transition-all hover:shadow-[0_0_25px_rgba(0,122,255,0.4)] active:scale-[0.97]"
+              style={{ background: 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)' }}
             >
               Получить код
             </button>
@@ -208,16 +219,17 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="Код из SMS"
                 maxLength={4}
-                className="w-full h-[44px] px-4 bg-[#F2F2F7] rounded-[10px] text-[22px] text-center tracking-[0.5em] font-mono outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30"
+                className="w-full h-[48px] px-4 bg-white/10 rounded-[13px] text-[24px] text-center tracking-[0.5em] font-mono text-white placeholder-white/40 outline-none border border-white/10 focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF] focus:ring-opacity-30 transition-all"
               />
               <button
                 onClick={onLogin}
                 disabled={code.length !== 4}
-                className="w-full h-[50px] bg-[#007AFF] text-white rounded-[13px] font-semibold text-[17px] disabled:opacity-40"
+                className="w-full h-[50px] text-white rounded-[13px] font-semibold text-[17px] disabled:opacity-40 transition-all hover:shadow-[0_0_25px_rgba(0,122,255,0.4)] active:scale-[0.97]"
+                style={{ background: 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)' }}
               >
                 Войти
               </button>
-              <p className="text-[13px] text-[#8E8E93] text-center">
+              <p className="text-[13px] text-white/40 text-center">
                 Для демо: введите любой 4-значный код
               </p>
             </>
@@ -234,10 +246,10 @@ function DashboardSection() {
   const lowStock = getLowStockItems()
 
   const stats = [
-    { label: 'Выручка за месяц', value: '247 500 ₽', icon: '💰', change: '+12%', color: '#34C759' },
-    { label: 'Заказов выполнено', value: '43', icon: '✅', change: '+8%', color: '#007AFF' },
-    { label: 'Клиентов', value: '38', icon: '👥', change: '+5%', color: '#5856D6' },
-    { label: 'Средний чек', value: '5 756 ₽', icon: '📊', change: '+3%', color: '#FF9500' },
+    { label: 'Выручка за месяц', value: '247 500 ₽', icon: '💰', change: '+12%', color: '#34C759', glow: 'rgba(52, 199, 89, 0.15)' },
+    { label: 'Заказов выполнено', value: '43', icon: '✅', change: '+8%', color: '#007AFF', glow: 'rgba(0, 122, 255, 0.15)' },
+    { label: 'Клиентов', value: '38', icon: '👥', change: '+5%', color: '#5856D6', glow: 'rgba(88, 86, 214, 0.15)' },
+    { label: 'Средний чек', value: '5 756 ₽', icon: '📊', change: '+3%', color: '#FF9500', glow: 'rgba(255, 149, 0, 0.15)' },
   ]
 
   const todayBookings = [
@@ -248,10 +260,11 @@ function DashboardSection() {
 
   return (
     <div className="space-y-6">
-      {/* Stats grid */}
+      {/* Stats grid with glow */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
-          <div key={i} className="bg-white rounded-[13px] p-5 shadow-sm">
+          <div key={i} className="bg-white rounded-[13px] p-5 transition-all duration-300 hover:-translate-y-1 spring-up"
+            style={{ animationDelay: `${i * 80}ms`, boxShadow: `0 4px 20px ${s.glow}` }}>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-2xl">{s.icon}</span>
               <span className="text-[13px] text-[#8E8E93]">{s.label}</span>
