@@ -53,7 +53,7 @@ export function verifyToken(token: string): TokenPayload | null {
 // Session management
 const SESSION_KEY = 'autoservice_session'
 
-export function saveSession(payload: TokenPayload): void {
+export function saveSession(payload: Omit<TokenPayload, 'exp'>): void {
   localStorage.setItem(SESSION_KEY, generateToken(payload))
 }
 
