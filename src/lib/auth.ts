@@ -4,13 +4,19 @@
 // AUTH MODULE — Хеширование, коды, JWT (localStorage-based demo)
 // ============================================
 
-// Simple hash for demo (use bcrypt in production)
+// Simple hash that works everywhere (including HTTP)
 export async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password + 'autoservice_salt_2026')
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  const str = password + 'autoservice_salt_2026'
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32-bit integer
+  }
+  // Convert to hex-like string
+  const hex = Math.abs(hash).toString(16).padStart(8, '0')
+  // Make it longer by repeating
+  return hex + hex.split('').reverse().join('') + hex + hex.split('').reverse().join('')
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
