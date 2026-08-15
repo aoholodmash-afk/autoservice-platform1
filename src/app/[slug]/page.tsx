@@ -5,8 +5,8 @@ import TenantClientApp from './client-app'
 type Props = { params: { slug: string } }
 
 // Server Component — renders SEO content visible to crawlers
-export default function TenantPage({ params }: Props) {
-  const tenant = getTenantBySlug(params.slug)
+export default async function TenantPage({ params }: Props) {
+  const tenant = await getTenantBySlug(params.slug)
 
   if (!tenant) {
     return (

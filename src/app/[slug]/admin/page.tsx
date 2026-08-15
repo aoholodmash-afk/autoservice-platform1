@@ -7,22 +7,26 @@ import { haptic } from '@/lib/constants'
 
 export default function TenantAdminPage({ params }: { params: { slug: string } }) {
   const { slug } = params
-  const tenant = getTenantBySlug(slug)
+  const [tenant, setTenant] = useState<Tenant | null>(null)
   const [isAuth, setIsAuth] = useState(false)
   const [section, setSection] = useState<'dashboard' | 'orders' | 'schedule' | 'clients' | 'services' | 'stock'>('dashboard')
 
   useEffect(() => {
-    const session = getSession()
-    setIsAuth(session !== null && session.role === 'admin' && session.tenantId === tenant?.id)
-  }, [tenant])
+    getTenantBySlug(slug).then(t => {
+      setTenant(t)
+      if (t) {
+        const session = getSession()
+        setIsAuth(session !== null && session.role === 'admin' && session.tenantId === t.id)
+      }
+    })
+  }, [slug])
 
   if (!tenant) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7]">
         <div className="text-center">
           <div className="text-[44px] mb-4">🏪</div>
-          <h1 className="text-[22px] font-bold mb-2">Филиал не найден</h1>
-          <a href="/" className="text-[#007AFF]">На главную</a>
+          <h1 className="text-[22px] font-bold mb-2">Загрузка...</h1>
         </div>
       </div>
     )

@@ -21,7 +21,7 @@ export default function SuperAdminPage() {
 
   useEffect(() => {
     if (isAuth) {
-      setTenants(getTenants())
+      getTenants().then(setTenants)
       setUsers(getAdminUsers())
     }
   }, [isAuth])
@@ -69,7 +69,7 @@ export default function SuperAdminPage() {
       {/* Content */}
       <main className="flex-1 p-6 overflow-auto">
         {section === 'dashboard' && <DashboardSection tenants={tenants} users={users} />}
-        {section === 'tenants' && <TenantsSection tenants={tenants} onRefresh={() => setTenants(getTenants())} />}
+        {section === 'tenants' && <TenantsSection tenants={tenants} onRefresh={() => getTenants().then(setTenants)} />}
         {section === 'users' && <UsersSection users={users} tenants={tenants} />}
         {section === 'invites' && <InvitesSection tenants={tenants} />}
       </main>
@@ -359,10 +359,10 @@ function CreateTenantForm({ onClose, onCreated }: { onClose: () => void; onCreat
     tariff: 'start' as 'start' | 'business' | 'pro',
   })
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.name || !form.phone) return
     const { saveTenant } = require('@/lib/tenantStore')
-    saveTenant({
+    await saveTenant({
       ...form,
       slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9а-яё]/gi, '-').replace(/-+/g, '-').slice(0, 30),
       isActive: true,

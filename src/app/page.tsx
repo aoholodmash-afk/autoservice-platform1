@@ -10,7 +10,7 @@ export default function HomePage() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    setTenants(getTenants().filter(t => t.isActive))
+    getTenants().then(all => setTenants(all.filter(t => t.isActive)))
   }, [])
 
   const filtered = tenants.filter(t =>

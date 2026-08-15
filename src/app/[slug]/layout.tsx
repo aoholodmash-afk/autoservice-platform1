@@ -4,7 +4,7 @@ import { getTenantBySlug } from '@/lib/tenantStore'
 type Props = { params: { slug: string } }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const tenant = getTenantBySlug(params.slug)
+  const tenant = await getTenantBySlug(params.slug)
   
   if (!tenant) {
     return {
